@@ -1,0 +1,10 @@
+partitions: 1024
+ip_address: 127.0.0.1
+sport: 50000
+eport: 50010
+num_threads: 4
+replica:
+  sender: true
+  ip_address: 127.0.0.1
+  port: 60000
+  num_rep_threads: 4
