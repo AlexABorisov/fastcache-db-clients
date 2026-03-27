@@ -123,7 +123,7 @@ public class FastCacheClient {
         GetRequest request = GetRequest.newBuilder().setKey(buildKey(key)).build();
         ValueResponse response = remove
                                  ? blockingStub.getAndRemoveFront(request)
-                                 : blockingStub.getFront(request);
+                                 : blockingStub.getHead(request);
         return response.getValue().getValue().getPayload().toByteArray();
     }
 

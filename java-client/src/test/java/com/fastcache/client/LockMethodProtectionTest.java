@@ -69,7 +69,7 @@ public class LockMethodProtectionTest {
         client.lockObjectAsync(listKey, LockType.GLOBAL, ownerId, 30).get();
 
         // 1. Intruder tries getFront
-        assertPermissionDenied(() -> client.getFrontAsync(listKey, intruderId).get());
+        assertPermissionDenied(() -> client.getHeadAsync(listKey, intruderId).get());
 
         // 2. Intruder tries addElementToTail
         assertPermissionDenied(() -> client.addElementToTailAsync(listKey,

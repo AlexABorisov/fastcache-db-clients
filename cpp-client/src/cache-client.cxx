@@ -546,14 +546,14 @@ std::vector<ClientValue*> CacheClient::getVector(const ClientKey &key) {
     return results;
 }
 
-ClientValue* CacheClient::getFront(const ClientKey &key, bool remove) {
+ClientValue* CacheClient::getHead(const ClientKey &key, bool remove) {
     ClientContext context;
     fastcache::GetRequest request;
     keyToKeyRequest(key, *(request.mutable_key()), config);
     fastcache::ValueResponse response;
     Status s;
     if (remove) s = stub_->getAndRemoveFront(&context, request, &response);
-    else s = stub_->getFront(&context, request, &response);
+    else s = stub_->getHead(&context, request, &response);
     return s.ok() ? valueResponseToValue(response.value()) : nullptr;
 }
 

@@ -119,7 +119,7 @@ public:
   std::vector<ClientValue*> getList(const ClientKey &key);
   std::vector<ClientValue*> getVector(const ClientKey &key);
 
-  ClientValue* getFront(const ClientKey &key, bool remove = false);
+  ClientValue* getHead(const ClientKey &key, bool remove = false);
   ClientValue* getTail(const ClientKey &key, bool remove = false);
 
   bool createList(const ClientKey &key, ClientValue &val, bool asArray = false, ClientKeyHint *hint = nullptr);

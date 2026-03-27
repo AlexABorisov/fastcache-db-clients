@@ -306,15 +306,7 @@ public class FastCacheAsyncClient {
         return createVectorAsync(key, initialValue, defaultClientId);
     }
 
-    public CompletableFuture<byte[]> getFrontAsync(String key, KeyHint hint, int clientId) {
-        CompletableFuture<byte[]> future = new CompletableFuture<>();
-        asyncStub.getFront(buildGetReq(key, hint, clientId), new DecompressingObserver(future));
-        return future;
-    }
 
-    public CompletableFuture<byte[]> getFrontAsync(String key) {
-        return getFrontAsync(key, null, defaultClientId);
-    }
 
     public CompletableFuture<BoolResponse> addElementToTailAsync(String key,
                                                                  KeyHint hint,
@@ -652,13 +644,6 @@ public class FastCacheAsyncClient {
     // --- LIFECYCLE ---
     public void shutdown() throws InterruptedException {
         channel.shutdown().awaitTermination(5, TimeUnit.SECONDS);
-    }
-
-    public CompletableFuture<byte[]> getFrontAsync(String key, int clientId) {
-        CompletableFuture<byte[]> future = new CompletableFuture<>();
-        asyncStub.getFront(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, clientId)).build(),
-                           new DecompressingObserver(future));
-        return future;
     }
 
     public CompletableFuture<byte[]> getHeadAsync(String key, int clientId) {

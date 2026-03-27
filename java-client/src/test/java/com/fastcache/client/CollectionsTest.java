@@ -149,7 +149,7 @@ public class CollectionsTest {
 
         // Get Head/Front
         byte[] head = client.getHeadAsync(key).get();
-        byte[] front = client.getFrontAsync(key).get();
+        byte[] front = client.getHeadAsync(key).get();
         Assertions.assertEquals("head", new String(head));
         Assertions.assertEquals("head", new String(front));
 
@@ -169,7 +169,7 @@ public class CollectionsTest {
         Assertions.assertEquals("item1", new String(removed));
 
         // Verify tail is now head
-        byte[] newHead = client.getFrontAsync(key).get();
+        byte[] newHead = client.getHeadAsync(key).get();
         Assertions.assertEquals("item2", new String(newHead));
     }
 
@@ -238,7 +238,7 @@ public class CollectionsTest {
     void testCollectionNotFound() {
         String key = "nonExistentCollection";
         try {
-            client.getFrontAsync(key).get();
+            client.getHeadAsync(key).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Server should return NOT_FOUND if key doesn't exist
