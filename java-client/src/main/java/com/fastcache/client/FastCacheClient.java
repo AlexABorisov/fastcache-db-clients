@@ -78,12 +78,10 @@ public class FastCacheClient {
 
     // --- 2. Collection Operations (List/Vector) ---
 
-    public KeyHintResponse createList(String key, byte[] firstValue, boolean asArray) {
+    public KeyHintResponse createList(String key, List<byte[]> initialValue, boolean asArray) {
         CreateListRequest.Builder builder = CreateListRequest.newBuilder().setKey(buildKey(key)).setAsArray(asArray);
 
-        if (firstValue != null) {
-            builder.setValue(buildValue(firstValue));
-        }
+        initialValue.stream().map(CompressionUtils::compressIfNeeded).forEach(builder::addValue);
 
         return blockingStub.createList(builder.build());
     }

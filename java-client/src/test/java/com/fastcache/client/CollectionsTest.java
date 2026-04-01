@@ -31,7 +31,7 @@ public class CollectionsTest {
     @Test
     void testListEdgeOperations() throws ExecutionException, InterruptedException {
         String listKey = "testVector";
-        client.createVectorAsync(listKey, "middle".getBytes())
+        client.createVectorAsync(listKey, List.of("middle".getBytes()))
                 .get(); // Assume server allows create as list or use createList
 
         client.addElementToTailAsync(listKey, List.of("tail".getBytes())).get();
@@ -48,7 +48,7 @@ public class CollectionsTest {
     @Test
     void testRangeStreaming() throws InterruptedException, ExecutionException {
         String rangeKey = "rangeList";
-        client.createListAsync(rangeKey, "0".getBytes()).get();
+        client.createListAsync(rangeKey, List.of("0".getBytes())).get();
         for (int i = 1; i < 10; i++) {
             client.addElementToTailAsync(rangeKey, List.of(String.valueOf(i).getBytes())).get();
         }
@@ -74,7 +74,7 @@ public class CollectionsTest {
     @Test
     void testRangeStreamingVector() throws InterruptedException, ExecutionException {
         String rangeKey = "rangeVector";
-        client.createVectorAsync(rangeKey, "0".getBytes()).get();
+        client.createVectorAsync(rangeKey, List.of("0".getBytes())).get();
         for (int i = 1; i < 10; i++) {
             client.addElementToTailAsync(rangeKey, List.of(String.valueOf(i).getBytes())).get();
         }
@@ -104,7 +104,7 @@ public class CollectionsTest {
         String val2 = "item2";
 
         // Create List with first element
-        client.createListAsync(key, val1.getBytes(StandardCharsets.UTF_8)).get();
+        client.createListAsync(key, List.of(val1.getBytes(StandardCharsets.UTF_8))).get();
         // Add second element
         client.addElementToTailAsync(key, List.of(val2.getBytes(StandardCharsets.UTF_8))).get();
 
@@ -125,7 +125,7 @@ public class CollectionsTest {
     @Test
     void testCreateAndStreamVector() throws ExecutionException, InterruptedException {
         String key = "vectorTestKey";
-        client.createVectorAsync(key, "v1".getBytes(StandardCharsets.UTF_8)).get();
+        client.createVectorAsync(key, List.of("v1".getBytes(StandardCharsets.UTF_8))).get();
         client.addElementToTailAsync(key, List.of("v2".getBytes(StandardCharsets.UTF_8))).get();
 
         List<String> results = new ArrayList<>();
@@ -144,7 +144,7 @@ public class CollectionsTest {
     @Test
     void testFrontBackOperations() throws ExecutionException, InterruptedException {
         String key = "edgeTestKey";
-        client.createListAsync(key, "head".getBytes(StandardCharsets.UTF_8)).get();
+        client.createListAsync(key, List.of("head".getBytes(StandardCharsets.UTF_8))).get();
         client.addElementToTailAsync(key, List.of("tail".getBytes(StandardCharsets.UTF_8))).get();
 
         // Get Head/Front
@@ -161,7 +161,7 @@ public class CollectionsTest {
     @Test
     void testAtomicRemoval() throws ExecutionException, InterruptedException {
         String key = "removalTestKey";
-        client.createListAsync(key, "item1".getBytes(StandardCharsets.UTF_8)).get();
+        client.createListAsync(key, List.of("item1".getBytes(StandardCharsets.UTF_8))).get();
         client.addElementToTailAsync(key, List.of("item2".getBytes(StandardCharsets.UTF_8))).get();
 
         // Remove Front
@@ -176,7 +176,7 @@ public class CollectionsTest {
     @Test
     void testPositionalOperationsVector() throws ExecutionException, InterruptedException {
         String key = "posTestKeyVector";
-        client.createVectorAsync(key, "pos0".getBytes(StandardCharsets.UTF_8)).get();
+        client.createVectorAsync(key, List.of("pos0".getBytes(StandardCharsets.UTF_8))).get();
         client.addElementToTailAsync(key,
                                      Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
                                                    "pos2".getBytes(StandardCharsets.UTF_8))).get();
@@ -206,7 +206,7 @@ public class CollectionsTest {
     @Test
     void testPositionalOperationsList() throws ExecutionException, InterruptedException {
         String key = "posTestKeyList";
-        client.createListAsync(key, "pos0".getBytes(StandardCharsets.UTF_8)).get();
+        client.createListAsync(key, List.of("pos0".getBytes(StandardCharsets.UTF_8))).get();
         client.addElementToTailAsync(key,
                                      Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
                                                    "pos2".getBytes(StandardCharsets.UTF_8))).get();

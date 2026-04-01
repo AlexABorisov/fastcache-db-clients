@@ -248,45 +248,40 @@ public class FastCacheAsyncClient {
 
     // --- SECTION 3: Collections (Unary) ---
 
-    public CompletableFuture<KeyHintResponse> createQueueAsync(String key, byte[] initialValue, int clientId) {
+    public CompletableFuture<KeyHintResponse> createQueueAsync(String key, List<byte[]> initialValue, int clientId) {
         CompletableFuture<KeyHintResponse> future = new CompletableFuture<>();
         CreateQueueRequest.Builder builder = CreateQueueRequest.newBuilder().setKey(KeyUtils.createKey(key, clientId));
-        if (initialValue != null) {
-            builder.setValue(CompressionUtils.compressIfNeeded(initialValue));
-        }
+        initialValue.stream().map(CompressionUtils::compressIfNeeded).forEach(builder::addValue);
         asyncStub.createQueue(builder.build(), new CompletableFutureObserver<>(future));
         return future;
     }
 
-    public CompletableFuture<KeyHintResponse> createQueueAsync(String key, byte[] initialValue) {
+    public CompletableFuture<KeyHintResponse> createQueueAsync(String key, List<byte[]> initialValue) {
         return createQueueAsync(key, initialValue, defaultClientId);
     }
     public CompletableFuture<KeyHintResponse> createQueueAsync(String key) {
         return createQueueAsync(key, null, defaultClientId);
     }
 
-    public CompletableFuture<KeyHintResponse> createListAsync(String key, byte[] initialValue, int clientId) {
+    public CompletableFuture<KeyHintResponse> createListAsync(String key, List<byte[]> initialValue, int clientId) {
         CompletableFuture<KeyHintResponse> future = new CompletableFuture<>();
         CreateListRequest.Builder builder = CreateListRequest.newBuilder().setKey(KeyUtils.createKey(key, clientId));
-        if (initialValue != null) {
-            builder.setValue(CompressionUtils.compressIfNeeded(initialValue));
-        }
+        initialValue.stream().map(CompressionUtils::compressIfNeeded).forEach(builder::addValue);
         asyncStub.createList(builder.build(), new CompletableFutureObserver<>(future));
         return future;
     }
 
-    public CompletableFuture<KeyHintResponse> createListAsync(String key, byte[] initialValue) {
+    public CompletableFuture<KeyHintResponse> createListAsync(String key, List<byte[]> initialValue) {
         return createListAsync(key, initialValue, defaultClientId);
     }
 
-    public CompletableFuture<KeyHintResponse> createVectorAsync(String key, byte[] initialValue, int clientId) {
+    public CompletableFuture<KeyHintResponse> createVectorAsync(String key, List<byte[]> initialValue, int clientId) {
         CompletableFuture<KeyHintResponse> future = new CompletableFuture<>();
         CreateListRequest.Builder builder = CreateListRequest.newBuilder()
                 .setKey(KeyUtils.createKey(key, clientId))
                 .setAsArray(true);
-        if (initialValue != null) {
-            builder.setValue(CompressionUtils.compressIfNeeded(initialValue));
-        }
+
+        initialValue.stream().map(CompressionUtils::compressIfNeeded).forEach(builder::addValue);
         asyncStub.createList(builder.build(), new CompletableFutureObserver<>(future));
         return future;
     }
@@ -302,7 +297,7 @@ public class FastCacheAsyncClient {
         return getAndRemoveFrontAsync(key, defaultClientId);
     }
 
-    public CompletableFuture<KeyHintResponse> createVectorAsync(String key, byte[] initialValue) {
+    public CompletableFuture<KeyHintResponse> createVectorAsync(String key,List<byte[]> initialValue) {
         return createVectorAsync(key, initialValue, defaultClientId);
     }
 

@@ -34,7 +34,7 @@ public class QueueOperationsTest {
         String second = "message2";
 
         // 1. createQueue with initial value
-        KeyHintResponse createRes = client.createQueueAsync(qKey, first.getBytes(StandardCharsets.UTF_8)).get();
+        KeyHintResponse createRes = client.createQueueAsync(qKey, List.of(first.getBytes(StandardCharsets.UTF_8))).get();
         Assertions.assertNotNull(createRes.getKeyHint());
 
         // 2. addElementToTail
@@ -69,7 +69,7 @@ public class QueueOperationsTest {
     @Test
     void testQueueOrderPersistence() throws ExecutionException, InterruptedException {
         String qKey = "orderTestQueue";
-        client.createQueueAsync(qKey, "1".getBytes()).get();
+        client.createQueueAsync(qKey, List.of("1".getBytes())).get();
         client.addElementToTailAsync(qKey, Arrays.asList("2".getBytes(), "3".getBytes())).get();
 
         // FIFO verification: 1 -> 2 -> 3

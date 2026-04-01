@@ -122,7 +122,9 @@ public:
   ClientValue* getHead(const ClientKey &key, bool remove = false);
   ClientValue* getTail(const ClientKey &key, bool remove = false);
 
-  bool createList(const ClientKey &key, ClientValue &val, bool asArray = false, ClientKeyHint *hint = nullptr);
+  bool createQueue(const ClientKey &key, std::list<ClientValue> &vals, bool asArray, ClientKeyHint *hint);
+
+  bool createList(const ClientKey &key, std::list<ClientValue> &vals, bool asArray = false, ClientKeyHint *hint = nullptr);
   struct LockResult {
       fastcache::LockStatus lockresult;
       std::string message;

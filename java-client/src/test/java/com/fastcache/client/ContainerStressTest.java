@@ -81,7 +81,7 @@ public class ContainerStressTest {
         int totalKeys = 1000;
         // Pre-create 1000 vectors to distribute across shards
         for (int i = 0; i < totalKeys; i++) {
-            client.createVectorAsync("vec_" + i, "init".getBytes());
+            client.createVectorAsync("vec_" + i, List.of("init".getBytes()));
         }
 
         ExecutorService executor = Executors.newFixedThreadPool(THREAD_COUNT);

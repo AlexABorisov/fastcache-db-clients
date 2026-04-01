@@ -33,7 +33,7 @@ public class AdvancedCollectionsTest {
     void testHeadAndPositionalAddition() throws ExecutionException, InterruptedException {
         String listKey = "headPosKey";
         // Start with a list: [Middle]
-        client.createListAsync(listKey, "Middle".getBytes(StandardCharsets.UTF_8)).get();
+        client.createListAsync(listKey, List.of("Middle".getBytes(StandardCharsets.UTF_8))).get();
 
         // addElementToHeadAsync -> [Head, Middle]
         client.addElementToHeadAsync(listKey, List.of("Head".getBytes(StandardCharsets.UTF_8))).get();
@@ -52,7 +52,7 @@ public class AdvancedCollectionsTest {
     void testTailAndPositionalRemoval() throws ExecutionException, InterruptedException {
         String vecKey = "removePosKey";
         // Setup Vector: [0, 1, 2]
-        client.createVectorAsync(vecKey, "0".getBytes()).get();
+        client.createVectorAsync(vecKey, List.of("0".getBytes())).get();
         client.addElementToTailAsync(vecKey, Arrays.asList("1".getBytes(), "2".getBytes())).get();
 
         // removeTailAsync -> [0, 1]
@@ -105,7 +105,7 @@ public class AdvancedCollectionsTest {
     @Test
     void testRemoveElementInRangeSuccess() throws ExecutionException, InterruptedException {
         String key = "boolRangeKey";
-        client.createVectorAsync(key, "0".getBytes()).get();
+        client.createVectorAsync(key, List.of("0".getBytes())).get();
         for (int i = 1; i < 5; i++) {
             client.addElementToTailAsync(key, List.of(String.valueOf(i).getBytes())).get();
         }
@@ -125,7 +125,7 @@ public class AdvancedCollectionsTest {
     @Test
     void testQueueTypeSafety() throws ExecutionException, InterruptedException {
         String qKey = "strictQueue";
-        client.createQueueAsync(qKey, "q1".getBytes()).get();
+        client.createQueueAsync(qKey, List.of("q1".getBytes())).get();
 
         // Queues typically don't support positional addition in many implementations.
         // If your server returns an error for positional ops on Queues, this test verifies that.

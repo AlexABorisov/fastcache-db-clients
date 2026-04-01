@@ -13,6 +13,7 @@ import org.junit.jupiter.api.function.Executable;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -65,7 +66,7 @@ public class LockMethodProtectionTest {
     @DisplayName("GLOBAL Lock: Blocks Collection operations from others")
     void testGlobalLockCollectionProtection() throws Exception {
         String listKey = "global_list";
-        client.createListAsync(listKey, "item1".getBytes()).get();
+        client.createListAsync(listKey, List.of("item1".getBytes())).get();
         client.lockObjectAsync(listKey, LockType.GLOBAL, ownerId, 30).get();
 
         // 1. Intruder tries getFront

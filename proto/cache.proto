@@ -56,7 +56,7 @@ message CreateRequest{
 
 message UpdateRequest{
     Key key = 1;
-    Value value = 2;
+    Value value = 2;    
 }
 
 
@@ -79,7 +79,7 @@ message ValueResponse {
 }
 
 message BatchValueResponse {
-   repeated Value value = 1;
+   repeated Value value = 1; 
 }
 
 
@@ -131,14 +131,14 @@ message KeyPositionRequest {
 message CreateQueueRequest {
     Key key = 1;
     optional uint64 ttl=2;
-    optional Value value = 3;
+    repeated  Value value = 3;
 }
 
 message CreateListRequest {
     Key key = 1;
     optional bool asArray = 2;
     optional uint64 ttl=3;
-    optional Value value = 4;
+    repeated Value value = 4;
 }
 
 message AddToRequest {
@@ -150,7 +150,7 @@ message AddToRequest {
 }
 
 
-enum LockType{
+enum LockType{    
     NO_LOCK=0;
     WRITE_LOCK=1;
     READ_LOCK=2;
@@ -239,12 +239,12 @@ service RelayService{
     rpc setTtl(TtlRequest)returns (BoolResponse){}
     rpc updateValue(UpdateRequest) returns (UpdateValueResponse){}
     rpc createKeyValue(CreateRequest) returns (KeyHintResponse){}
-    rpc remove(GetRequest) returns (BoolResponse){}
-    rpc getAndDeleteValue(GetRequest) returns (ValueResponse){}
-    rpc createList(CreateListRequest) returns (KeyHintResponse){}
+    rpc remove(GetRequest) returns (BoolResponse){} 
+    rpc getAndDeleteValue(GetRequest) returns (ValueResponse){} 
+    rpc createList(CreateListRequest) returns (KeyHintResponse){} 
     rpc createQueue(CreateQueueRequest) returns (KeyHintResponse){}
     rpc removeTail(GetRequest) returns (BoolResponse){}
-    rpc removeHead(GetRequest) returns (BoolResponse){}
+    rpc removeHead(GetRequest) returns (BoolResponse){} 
     rpc removeElementAtPosition(KeyPositionRequest) returns (BoolResponse){}
     rpc removeElementInRange(KeyRangeRequest) returns (stream BoolResponse){}
     rpc addElementToTail(AddToRequest) returns (BoolResponse){}
@@ -274,10 +274,10 @@ service DataReplicationService{
     rpc addElementToPosition(AddToRequest) returns (BoolResponse){}
 }
 
-service FastCacheGrpcService{
+service FastCacheGrpcService{    
     rpc lockObject(LockRequest)returns (LockResponse){}
     rpc unlockObject(UnLockRequest)returns (UnlockResponse){}
-    rpc setTtl(TtlRequest)returns (BoolResponse){}
+    rpc setTtl(TtlRequest)returns (BoolResponse){}    
     rpc getTtl(GetRequest)returns (TtlResponse){}
     rpc getValue(GetRequest) returns (ValueResponse){}
     rpc getAndDeleteValue(GetRequest) returns (ValueResponse){}
@@ -285,9 +285,9 @@ service FastCacheGrpcService{
     rpc updateValue(UpdateRequest) returns (UpdateValueResponse){}
     rpc createKeyValue(CreateRequest) returns (KeyHintResponse){}
     rpc remove(GetRequest) returns (BoolResponse){}
-
-    rpc createList(CreateListRequest) returns (KeyHintResponse){}
-    rpc createQueue(CreateQueueRequest) returns (KeyHintResponse){}
+    
+    rpc createList(CreateListRequest) returns (KeyHintResponse){} 
+    rpc createQueue(CreateQueueRequest) returns (KeyHintResponse){} 
     rpc getList(GetRequest) returns (stream BatchValueResponse){}
     rpc getVector(GetRequest) returns (stream BatchValueResponse){}
     rpc getAndRemoveFront(GetRequest) returns (ValueResponse){}
@@ -305,7 +305,7 @@ service FastCacheGrpcService{
     rpc addElementToTail(AddToRequest) returns (BoolResponse){}
     rpc addElementToHead(AddToRequest) returns (BoolResponse){}
     rpc addElementToPosition(AddToRequest) returns (BoolResponse){}
-
-
+    
+    
 
 }

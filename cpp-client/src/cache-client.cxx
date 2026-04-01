@@ -147,34 +147,71 @@ void valueToRequest(fastcache::CreateRequest &createRequest, ClientValue &val,Cl
     }
 }
 
-void valueToRequest(fastcache::CreateListRequest &createRequest, ClientValue &val,ClientConfig config)
+void valueToRequest(fastcache::CreateListRequest &createRequest, std::list<ClientValue> &val,ClientConfig config)
 {
-    auto valueData = createRequest.mutable_value();
-    auto valuePayload = valueData->mutable_value();
-    if (needValueCompression(val,config))
-    {
-        auto compInfo = valueData->mutable_compressioninfo();
-        compInfo->set_enabled(true);
-        compInfo->set_rawsize(val._size);
-        uint32_t compressedSize;
-        char *out = compress(val._data, val._size, &compressedSize);
-        if (out == nullptr){
-            std::cerr << "Client compression error sending raw message" << std::endl;
-            valueData->clear_compressioninfo();
-            valuePayload->set_size(val._size);
-            valuePayload->set_payload(val._data, ((size_t)val._size));
-        } else{
-            valuePayload->set_size(compressedSize);
-            valuePayload->set_payload(out, ((size_t)compressedSize));
-            delete []out;
+    for (auto client_value : val) {
+        auto valueData = createRequest.add_value();
+        auto valuePayload = valueData->mutable_value();
+        if (needValueCompression(client_value,config))
+        {
+            auto compInfo = valueData->mutable_compressioninfo();
+            compInfo->set_enabled(true);
+            compInfo->set_rawsize(client_value._size);
+            uint32_t compressedSize;
+            char *out = compress(client_value._data, client_value._size, &compressedSize);
+            if (out == nullptr){
+                std::cerr << "Client compression error sending raw message" << std::endl;
+                valueData->clear_compressioninfo();
+                valuePayload->set_size(client_value._size);
+                valuePayload->set_payload(client_value._data, ((size_t)client_value._size));
+            } else{
+                valuePayload->set_size(compressedSize);
+                valuePayload->set_payload(out, ((size_t)compressedSize));
+                delete []out;
+            }
+
         }
-        
+        else
+        {
+            valuePayload->set_size(client_value._size);
+            valuePayload->set_payload(client_value._data, ((size_t)client_value._size));
+        }
     }
-    else
-    {
-        valuePayload->set_size(val._size);
-        valuePayload->set_payload(val._data, ((size_t)val._size));
+
+
+}
+void valueToRequest(fastcache::CreateQueueRequest &createRequest, std::list<ClientValue> &val,ClientConfig config)
+{
+    for (auto client_value : val) {
+        auto valueData = createRequest.add_value();
+        auto valuePayload = valueData->mutable_value();
+        if (needValueCompression(client_value,config))
+        {
+            auto compInfo = valueData->mutable_compressioninfo();
+            compInfo->set_enabled(true);
+            compInfo->set_rawsize(client_value._size);
+            uint32_t compressedSize;
+            char *out = compress(client_value._data, client_value._size, &compressedSize);
+            if (out == nullptr){
+                std::cerr << "Client compression error sending raw message" << std::endl;
+                valueData->clear_compressioninfo();
+                valuePayload->set_size(client_value._size);
+                valuePayload->set_payload(client_value._data, ((size_t)client_value._size));
+            } else{
+                valuePayload->set_size(compressedSize);
+                valuePayload->set_payload(out, ((size_t)compressedSize));
+                delete []out;
+            }
+
+        }
+        else
+        {
+            valuePayload->set_size(client_value._size);
+            valuePayload->set_payload(client_value._data, ((size_t)client_value._size));
+        }
     }
+
+
 }
 
 
@@ -568,11 +605,27 @@ ClientValue* CacheClient::getTail(const ClientKey &key, bool remove) {
     return s.ok() ? valueResponseToValue(response.value()) : nullptr;
 }
 
-bool CacheClient::createList(const ClientKey &key, ClientValue &val, bool asArray, ClientKeyHint *hint) {
+bool CacheClient::createQueue(const ClientKey &key, std::list<ClientValue> &vals, bool asArray, ClientKeyHint *hint) {
+    ClientContext context;
+    fastcache::CreateQueueRequest request;
+    keyToKeyRequest(key, *(request.mutable_key()), config);
+    valueToRequest(request, vals, config); // Re-use valueToRequest logic
+
+
+    fastcache::KeyHintResponse response;
+    Status s = stub_->createQueue(&context, request, &response);
+    if (s.ok() && hint) {
+        hint->_strong_hash = response.keyhint().strong_hash();
+        hint->_week_hash = response.keyhint().week_hash();
+    }
+    return s.ok();
+}
+
+bool CacheClient::createList(const ClientKey &key, std::list<ClientValue> &vals, bool asArray, ClientKeyHint *hint) {
     ClientContext context;
     fastcache::CreateListRequest request;
     keyToKeyRequest(key, *(request.mutable_key()), config);
-    valueToRequest(request, val, config); // Re-use valueToRequest logic
+    valueToRequest(request, vals, config); // Re-use valueToRequest logic
     request.set_asarray(asArray);
 
     fastcache::KeyHintResponse response;
