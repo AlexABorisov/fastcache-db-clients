@@ -28,15 +28,21 @@ message Key{
     optional uint32 clientId=4;
 }
 
+message LockInfo{
+    LockType type = 1;
+    optional uint32 lockedBy=2;
+    optional uint64 lockedTill=3;
+}
+
 message Value{
     BinaryPayload value = 1;
     optional CompressedInfo compressionInfo = 2;
     optional uint64 ttl=3;
+    optional LockInfo lock_info = 4;
 }
 
 message GetRequest{
     Key key = 1;
-    optional string cliendId=2;
 }
 
 message TtlRequest{
@@ -93,37 +99,14 @@ message KeyHintResponse {
    KeyHint keyHint = 1;
 }
 
-message CoordinatorRequest {
-    string ownServiceId = 1;
-    string ipAddress = 2;
-    uint32 uptime = 3;
-}
-
-message CoordinatorReply {
-    string serviceId = 1;
-    uint32 uptime = 2;
-}
-
-message IAmMater {
-    string serviceId = 1;
-}
-
-message PartitionInfo {
-    string masterPartitions = 1;
-    string backupPartitions = 2;
-}
-
-
 message KeyRangeRequest {
     Key key = 1;
-    optional string cliendId=2;
     uint32 start = 3;
     uint32 end = 4;
 }
 
 message KeyPositionRequest {
     Key key = 1;
-    optional string cliendId=2;
     uint32 pos = 3;
     optional uint32 end = 4;
 }
@@ -189,11 +172,6 @@ message UnlockResponse {
 }
 
 
-service CoordinatorService{
-    rpc sendInit(CoordinatorRequest) returns (CoordinatorReply){}
-    rpc masterAssigned(IAmMater) returns (BoolResponse){}
-    rpc sendPartitionInfo(PartitionInfo) returns(BoolResponse){}
-}
 enum ReplicationCommandType {
     LOCK_REQUEST =0;
     UNLOCK_REQUEST =1;
@@ -232,29 +210,28 @@ message BatchSingleMessage{
 message BatchMessage{
     repeated BatchSingleMessage batch_single_messages = 1;
 }
-
-service RelayService{
-    rpc lockObject(LockRequest)returns (LockResponse){}
-    rpc unlockObject(UnLockRequest)returns (UnlockResponse){}
-    rpc setTtl(TtlRequest)returns (BoolResponse){}
-    rpc updateValue(UpdateRequest) returns (UpdateValueResponse){}
-    rpc createKeyValue(CreateRequest) returns (KeyHintResponse){}
-    rpc remove(GetRequest) returns (BoolResponse){} 
-    rpc getAndDeleteValue(GetRequest) returns (ValueResponse){} 
-    rpc createList(CreateListRequest) returns (KeyHintResponse){} 
-    rpc createQueue(CreateQueueRequest) returns (KeyHintResponse){}
-    rpc removeTail(GetRequest) returns (BoolResponse){}
-    rpc removeHead(GetRequest) returns (BoolResponse){} 
-    rpc removeElementAtPosition(KeyPositionRequest) returns (BoolResponse){}
-    rpc removeElementInRange(KeyRangeRequest) returns (stream BoolResponse){}
-    rpc addElementToTail(AddToRequest) returns (BoolResponse){}
-    rpc addElementToHead(AddToRequest) returns (BoolResponse){}
-    rpc addElementToPosition(AddToRequest) returns (BoolResponse){}
-    rpc getAndRemoveFront(GetRequest) returns (ValueResponse){}
-    rpc getAndRemoveTail(GetRequest) returns (ValueResponse){}
-    rpc getAndRemoveElementAtPosition(KeyPositionRequest) returns (ValueResponse){}
-
-}
+//
+//service RelayService{
+//    rpc lockObject(LockRequest)returns (LockResponse){}
+//    rpc unlockObject(UnLockRequest)returns (UnlockResponse){}
+//    rpc setTtl(TtlRequest)returns (BoolResponse){}
+//    rpc updateValue(UpdateRequest) returns (UpdateValueResponse){}
+//    rpc createKeyValue(CreateRequest) returns (KeyHintResponse){}
+//    rpc remove(GetRequest) returns (BoolResponse){}
+//    rpc getAndDeleteValue(GetRequest) returns (ValueResponse){}
+//    rpc createList(CreateListRequest) returns (KeyHintResponse){}
+//    rpc createQueue(CreateQueueRequest) returns (KeyHintResponse){}
+//    rpc removeTail(GetRequest) returns (BoolResponse){}
+//    rpc removeHead(GetRequest) returns (BoolResponse){}
+//    rpc removeElementAtPosition(KeyPositionRequest) returns (BoolResponse){}
+//    rpc removeElementInRange(KeyRangeRequest) returns (stream BoolResponse){}
+//    rpc addElementToTail(AddToRequest) returns (BoolResponse){}
+//    rpc addElementToHead(AddToRequest) returns (BoolResponse){}
+//    rpc addElementToPosition(AddToRequest) returns (BoolResponse){}
+//    rpc getAndRemoveFront(GetRequest) returns (ValueResponse){}
+//    rpc getAndRemoveTail(GetRequest) returns (ValueResponse){}
+//    rpc getAndRemoveElementAtPosition(KeyPositionRequest) returns (ValueResponse){}
+//}
 service DataReplicationService{
     rpc batchMessage(BatchMessage) returns (BoolResponse){}
     rpc lockObject(LockRequest)returns (BoolResponse){}
@@ -301,7 +278,6 @@ service FastCacheGrpcService{
     rpc removeTail(GetRequest) returns (BoolResponse){}
     rpc removeHead(GetRequest) returns (BoolResponse){}
     rpc removeElementAtPosition(KeyPositionRequest) returns (BoolResponse){}
-    rpc removeElementInRange(KeyRangeRequest) returns (stream BoolResponse){}
     rpc addElementToTail(AddToRequest) returns (BoolResponse){}
     rpc addElementToHead(AddToRequest) returns (BoolResponse){}
     rpc addElementToPosition(AddToRequest) returns (BoolResponse){}

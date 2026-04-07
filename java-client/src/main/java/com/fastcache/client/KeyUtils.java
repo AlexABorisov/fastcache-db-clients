@@ -4,7 +4,10 @@ import com.fastcache.grpc.BinaryPayload;
 import com.fastcache.grpc.Key;
 import com.fastcache.grpc.KeyHint;
 import com.fastcache.grpc.Value;
+import com.fastcache.utils.CompressionUtils;
 import com.google.protobuf.ByteString;
+
+import java.nio.charset.StandardCharsets;
 
 public class KeyUtils {
 
@@ -12,27 +15,14 @@ public class KeyUtils {
      * Creates a Key with a clientId for Global Lock authorization.
      */
     public static Key createKey(String keyStr, int clientId) {
-        return Key.newBuilder()
-                .setPayload(BinaryPayload.newBuilder()
-                                    .setPayload(ByteString.copyFromUtf8(keyStr))
-                                    .setSize(keyStr.length())
-                                    .build())
-                .setClientId(clientId)
-                .build();
+        return CompressionUtils.compressKeyIfNeeded(keyStr.getBytes(StandardCharsets.UTF_8),clientId).build();
     }
 
     /**
      * Creates a Key using a pre-calculated KeyHint (Strong/Week hashes).
      */
     public static Key createKey(String keyStr, KeyHint hint, int clientId) {
-        return Key.newBuilder()
-                .setPayload(BinaryPayload.newBuilder()
-                                    .setPayload(ByteString.copyFromUtf8(keyStr))
-                                    .setSize(keyStr.length())
-                                    .build())
-                .setKeyHint(hint)
-                .setClientId(clientId)
-                .build();
+        return CompressionUtils.compressKeyIfNeeded(keyStr.getBytes(StandardCharsets.UTF_8),clientId).setKeyHint(hint).build();
     }
 
     /**

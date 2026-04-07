@@ -1,5 +1,6 @@
-package com.fastcache.client;
+package com.fastcache.client.standalone;
 
+import com.fastcache.client.FastCacheAsyncClient;
 import com.fastcache.grpc.LockResponse;
 import com.fastcache.grpc.LockStatus;
 import com.fastcache.grpc.LockType;

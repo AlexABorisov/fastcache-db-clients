@@ -1,5 +1,6 @@
-package com.fastcache.client;
+package com.fastcache.client.standalone;
 
+import com.fastcache.client.FastCacheAsyncClient;
 import com.fastcache.grpc.KeyHintResponse;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -39,8 +40,8 @@ public class QueueOperationsTest {
 
         // 2. addElementToTail
         boolean added = client.addElementToTailAsync(qKey, List.of(second.getBytes(StandardCharsets.UTF_8)))
-                .get()
-                .getValue();
+                .get();
+
         Assertions.assertTrue(added);
 
         // 3. getHead (Peek without removing)
@@ -56,7 +57,7 @@ public class QueueOperationsTest {
         Assertions.assertEquals(second, new String(newHeadData));
 
         // 6. removeHead (Delete without returning data)
-        boolean removed = client.removeHeadAsync(qKey).get().getValue();
+        boolean removed = client.removeHeadAsync(qKey).get();
         Assertions.assertTrue(removed);
 
         // 7. Verify Queue is now empty or key doesn't exist

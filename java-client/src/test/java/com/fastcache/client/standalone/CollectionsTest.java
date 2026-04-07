@@ -1,5 +1,6 @@
-package com.fastcache.client;
+package com.fastcache.client.standalone;
 
+import com.fastcache.client.FastCacheAsyncClient;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.AfterEach;
@@ -41,7 +42,7 @@ public class CollectionsTest {
         Assertions.assertEquals("tail", new String(posVal));
 
         // Remove Head
-        Boolean headRemoved = client.removeHeadAsync(listKey).get().getValue();
+        Boolean headRemoved = client.removeHeadAsync(listKey).get();
         Assertions.assertTrue(headRemoved);
     }
 
@@ -53,22 +54,14 @@ public class CollectionsTest {
             client.addElementToTailAsync(rangeKey, List.of(String.valueOf(i).getBytes())).get();
         }
 
-        List<String> rangeData = new ArrayList<>();
-        CountDownLatch latch = new CountDownLatch(1);
+
 
         // Get elements from index 2 to 5
-        client.streamElementInRange(rangeKey,
-                                    false,
-                                    2,
-                                    5,
-                                    batch -> batch.forEach(v -> rangeData.add(new String(v))),
-                                    err -> latch.countDown(),
-                                    latch::countDown);
+        List<byte[]> rangeData = client.streamElementInRange(rangeKey, false, 2, 5).get();
 
-        latch.await(2, TimeUnit.SECONDS);
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
-        Assertions.assertEquals("2", rangeData.get(0));
+        Assertions.assertEquals("2", new String(rangeData.get(0)));
     }
 
     @Test
@@ -79,22 +72,12 @@ public class CollectionsTest {
             client.addElementToTailAsync(rangeKey, List.of(String.valueOf(i).getBytes())).get();
         }
 
-        List<String> rangeData = new ArrayList<>();
-        CountDownLatch latch = new CountDownLatch(1);
-
         // Get elements from index 2 to 5
-        client.streamElementInRange(rangeKey,
-                                    true,
-                                    2,
-                                    5,
-                                    batch -> batch.forEach(v -> rangeData.add(new String(v))),
-                                    err -> latch.countDown(),
-                                    latch::countDown);
+        List<byte[]> rangeData = client.streamElementInRange(rangeKey, true, 2, 5).get();
 
-        latch.await(2, TimeUnit.SECONDS);
         System.out.println(rangeData);
         Assertions.assertEquals(3, rangeData.size()); // 2, 3, 4, 5
-        Assertions.assertEquals("2", rangeData.get(0));
+        Assertions.assertEquals("2", new String(rangeData.get(0)));
     }
 
     @Test
@@ -108,15 +91,10 @@ public class CollectionsTest {
         // Add second element
         client.addElementToTailAsync(key, List.of(val2.getBytes(StandardCharsets.UTF_8))).get();
 
-        List<String> results = new ArrayList<>();
-        CountDownLatch latch = new CountDownLatch(1);
 
-        client.streamList(key,
-                          batch -> batch.forEach(bytes -> results.add(new String(bytes))),
-                          err -> latch.countDown(),
-                          latch::countDown);
 
-        latch.await(5, TimeUnit.SECONDS);
+        List<String> results = client.streamList(key).get().stream().map(String::new).toList();
+
         Assertions.assertEquals(2, results.size());
         Assertions.assertEquals(val1, results.get(0));
         Assertions.assertEquals(val2, results.get(1));
@@ -128,15 +106,8 @@ public class CollectionsTest {
         client.createVectorAsync(key, List.of("v1".getBytes(StandardCharsets.UTF_8))).get();
         client.addElementToTailAsync(key, List.of("v2".getBytes(StandardCharsets.UTF_8))).get();
 
-        List<String> results = new ArrayList<>();
-        CountDownLatch latch = new CountDownLatch(1);
+        List<String> results = client.streamVector(key).get().stream().map(String::new).toList();
 
-        client.streamVector(key,
-                            batch -> batch.forEach(bytes -> results.add(new String(bytes))),
-                            err -> latch.countDown(),
-                            latch::countDown);
-
-        latch.await(5, TimeUnit.SECONDS);
         Assertions.assertEquals(2, results.size());
         Assertions.assertTrue(results.contains("v1"));
     }
@@ -149,7 +120,7 @@ public class CollectionsTest {
 
         // Get Head/Front
         byte[] head = client.getHeadAsync(key).get();
-        byte[] front = client.getHeadAsync(key).get();
+        byte[] front = client.getFrontAsync(key).get();
         Assertions.assertEquals("head", new String(head));
         Assertions.assertEquals("head", new String(front));
 
@@ -169,7 +140,7 @@ public class CollectionsTest {
         Assertions.assertEquals("item1", new String(removed));
 
         // Verify tail is now head
-        byte[] newHead = client.getHeadAsync(key).get();
+        byte[] newHead = client.getFrontAsync(key).get();
         Assertions.assertEquals("item2", new String(newHead));
     }
 
@@ -188,12 +159,9 @@ public class CollectionsTest {
         // Remove At Position 1
         byte[] removed = client.getAndRemoveElementAtPositionAsync(key, 1).get();
         Assertions.assertEquals("pos1", new String(removed));
-        List<String> results = new ArrayList<>();
+
         CountDownLatch latch = new CountDownLatch(1);
-        client.streamVector(key,
-                            batch -> batch.forEach(bytes -> results.add(new String(bytes))),
-                            err -> latch.countDown(),
-                            latch::countDown);
+        List<byte[]> results = client.streamVector(key).get();
 
         latch.await(5, TimeUnit.SECONDS);
         System.out.println(results);
@@ -219,15 +187,9 @@ public class CollectionsTest {
         byte[] removed = client.getAndRemoveElementAtPositionAsync(key, 1).get();
         Assertions.assertEquals("pos1", new String(removed));
 
-        List<String> results = new ArrayList<>();
-        CountDownLatch latch = new CountDownLatch(1);
 
-        client.streamList(key,
-                          batch -> batch.forEach(bytes -> results.add(new String(bytes))),
-                          err -> latch.countDown(),
-                          latch::countDown);
+        List<byte[]> results = client.streamList(key).get();
 
-        latch.await(5, TimeUnit.SECONDS);
         System.out.println(results);
         // Verify Shift
         byte[] newPos1 = client.getElementAtPositionAsync(key, 1).get();
@@ -238,7 +200,7 @@ public class CollectionsTest {
     void testCollectionNotFound() {
         String key = "nonExistentCollection";
         try {
-            client.getHeadAsync(key).get();
+            client.getFrontAsync(key).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Server should return NOT_FOUND if key doesn't exist

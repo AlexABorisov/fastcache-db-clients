@@ -1,5 +1,6 @@
-package com.fastcache.client;
+package com.fastcache.client.standalone;
 
+import com.fastcache.client.FastCacheAsyncClient;
 import com.fastcache.grpc.KeyHintResponse;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -11,21 +12,18 @@ import org.junit.jupiter.api.Test;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.ExecutionException;
 
-public class RawValuesReplicationTest {
+public class RawValuesTest {
 
     private FastCacheAsyncClient client;
-    private FastCacheAsyncClient clientReplica;
 
     @BeforeEach
     void init() {
         client = new FastCacheAsyncClient("127.0.0.1", 50000);
-        clientReplica = new FastCacheAsyncClient("127.0.0.1", 51000);
     }
 
     @AfterEach
     void stop() throws InterruptedException {
         client.shutdown();
-        clientReplica.shutdown();
     }
 
     @Test
@@ -36,19 +34,10 @@ public class RawValuesReplicationTest {
                 .get();
         byte[] bytes = client.getValueAsync(testKey).get();
         byte[] bytes1 = client.getValueAsync(testKey, keyHintResponse.getKeyHint()).get();
-        Thread.sleep(10);
-        byte[] clientReplicaD = clientReplica.getValueAsync(testKey).get();
-        byte[] clientReplicaD1 = clientReplica.getValueAsync(testKey, keyHintResponse.getKeyHint()).get();
-
         Assertions.assertNotNull(keyHintResponse.getKeyHint());
         Assertions.assertEquals(testValue, new String(bytes1));
         Assertions.assertEquals(testValue, new String(bytes));
         Assertions.assertEquals(new String(bytes), new String(bytes1));
-        Assertions.assertEquals(new String(bytes), new String(clientReplicaD));
-        Assertions.assertEquals(new String(clientReplicaD), new String(clientReplicaD1));
-
-
-
     }
 
     @Test
@@ -59,14 +48,9 @@ public class RawValuesReplicationTest {
                 .get();
         byte[] bytes = client.getValueAsync(testKey).get();
         Boolean isExist = client.existAsync(testKey).get();
-        Thread.sleep(10);
-        byte[] bytesreplica = clientReplica.getValueAsync(testKey).get();
-        Boolean isExistreplica = clientReplica.existAsync(testKey).get();
         Assertions.assertNotNull(keyHintResponse.getKeyHint());
         Assertions.assertEquals(testValue, new String(bytes));
-        Assertions.assertEquals(testValue, new String(bytesreplica));
         Assertions.assertTrue(isExist);
-        Assertions.assertTrue(isExistreplica);
     }
 
     @Test
@@ -77,12 +61,9 @@ public class RawValuesReplicationTest {
                 .get();
         byte[] bytes = client.getValueAsync(testKey).get();
         Boolean isExist = client.existAsync(testKey, keyHintResponse.getKeyHint()).get();
-        Thread.sleep(10);
-        Boolean isExistReplica = clientReplica.existAsync(testKey, keyHintResponse.getKeyHint()).get();
         Assertions.assertNotNull(keyHintResponse.getKeyHint());
         Assertions.assertEquals(testValue, new String(bytes));
         Assertions.assertTrue(isExist);
-        Assertions.assertTrue(isExistReplica);
     }
 
     @Test
@@ -95,8 +76,7 @@ public class RawValuesReplicationTest {
         Assertions.assertNotNull(keyHintResponse.getKeyHint());
         Assertions.assertEquals(testValue, new String(bytes));
         try {
-            Thread.sleep(10);
-            clientReplica.getValueAsync(testKey).get();
+            client.getValueAsync(testKey).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(cause.getStatus().getCode(), Status.Code.NOT_FOUND);
@@ -112,13 +92,6 @@ public class RawValuesReplicationTest {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(cause.getStatus().getCode(), Status.Code.NOT_FOUND);
         }
-        Thread.sleep(10);
-        try {
-            clientReplica.getValueAsync(testKey).get();
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(cause.getStatus().getCode(), Status.Code.NOT_FOUND);
-        }
     }
 
     @Test
@@ -126,13 +99,6 @@ public class RawValuesReplicationTest {
         String testKey = "singleNonExistValue";
         try {
             client.existAsync(testKey).get();
-        } catch (ExecutionException e) {
-            StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(cause.getStatus().getCode(), Status.Code.NOT_FOUND);
-        }
-        Thread.sleep(10);
-        try {
-            clientReplica.existAsync(testKey).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             Assertions.assertEquals(cause.getStatus().getCode(), Status.Code.NOT_FOUND);
@@ -150,8 +116,7 @@ public class RawValuesReplicationTest {
         Assertions.assertNotNull(keyHintResponse.getKeyHint());
         Assertions.assertEquals(testValue, new String(bytes));
         byte[] oldVal = client.updateKeyAsync(testKey, testValueUpdate.getBytes(StandardCharsets.UTF_8)).get();
-        Thread.sleep(10);
-        byte[] newVal = clientReplica.getValueAsync(testKey).get();
+        byte[] newVal = client.getValueAsync(testKey).get();
         Assertions.assertEquals(testValue, new String(oldVal));
         Assertions.assertEquals(testValueUpdate, new String(newVal));
     }
@@ -169,8 +134,7 @@ public class RawValuesReplicationTest {
         byte[] oldVal = client.updateKeyAsync(testKey,
                                               keyHintResponse.getKeyHint(),
                                               testValueUpdate.getBytes(StandardCharsets.UTF_8)).get();
-        Thread.sleep(10);
-        byte[] newVal = clientReplica.getValueAsync(testKey).get();
+        byte[] newVal = client.getValueAsync(testKey).get();
         Assertions.assertEquals(testValue, new String(oldVal));
         Assertions.assertEquals(testValueUpdate, new String(newVal));
     }

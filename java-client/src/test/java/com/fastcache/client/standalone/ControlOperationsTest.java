@@ -1,5 +1,6 @@
-package com.fastcache.client;
+package com.fastcache.client.standalone;
 
+import com.fastcache.client.FastCacheAsyncClient;
 import com.fastcache.grpc.LockResponse;
 import com.fastcache.grpc.LockStatus;
 import com.fastcache.grpc.LockType;
@@ -24,13 +25,13 @@ public class ControlOperationsTest {
         client.shutdown();
     }
 
-    //@Test
+    @Test
     void testTtlMethods() throws ExecutionException, InterruptedException {
         String key = "ttlKey";
         client.createKeyAsync(key, "data".getBytes()).get();
 
         // Set TTL to 100 seconds
-        Boolean success = client.setTtlAsync(key, 100).get().getValue();
+        Boolean success = client.setTtlAsync(key, 100).get();
         Assertions.assertTrue(success);
 
         // Verify TTL
