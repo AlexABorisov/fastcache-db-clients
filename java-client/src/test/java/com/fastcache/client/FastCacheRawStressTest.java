@@ -1,9 +1,15 @@
 package com.fastcache.client;
 
+import com.fastcache.client.standalone.TestBase;
+import io.grpc.inprocess.InProcessChannelBuilder;
+import io.grpc.inprocess.InProcessServerBuilder;
 import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -14,8 +20,16 @@ public class FastCacheRawStressTest {
 
     private final int THREAD_COUNT = 32; // Optimized for i9
     private final int OPERATIONS_PER_THREAD = 100000;
-    private final String HOST = "127.0.0.1";
-    private final int PORT = 50000;
+    private String serverName;
+
+    @BeforeEach
+    void init() throws IOException {
+        serverName = "stress-server-" + UUID.randomUUID();
+        InProcessServerBuilder.forName(serverName)
+                .addService(new TestBase.MockFastCacheService())
+                .build()
+                .start();
+    }
 
     @Test
     void highConcurrencyLoadTest() throws InterruptedException {
@@ -31,7 +45,8 @@ public class FastCacheRawStressTest {
             final int threadId = i;
             executor.submit(() -> {
                 // Each thread gets its own Async Client (simulating multiple microservices)
-                FastCacheAsyncClient client = new FastCacheAsyncClient(HOST, PORT);
+                FastCacheAsyncClient client = new FastCacheAsyncClient(
+                        InProcessChannelBuilder.forName(serverName).build());
 
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
@@ -41,13 +56,13 @@ public class FastCacheRawStressTest {
                         // Mix of operations
                         try {
                             // 1. Write
-                            client.createKeyAsync(key, data).get(5, TimeUnit.SECONDS);
+                            client.createKeyValue(key, data).get(5, TimeUnit.SECONDS);
 
                             // 2. Immediate Read
-                            byte[] result = client.getValueAsync(key).get(5, TimeUnit.SECONDS);
+                            byte[] result = client.getValue(key).get(5, TimeUnit.SECONDS);
 
                             // 3. Update
-                            client.updateKeyAsync(key, (new String(data) + "_updated").getBytes())
+                            client.updateKeyValue(key, (new String(data) + "_updated").getBytes())
                                     .get(5, TimeUnit.SECONDS);
 
                             if (result != null) {

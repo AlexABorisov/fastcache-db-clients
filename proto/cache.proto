@@ -79,6 +79,11 @@ message BoolResponse{
     optional string message = 2;
 }
 
+message IntResponse{
+    uint32 size = 1;
+}
+
+
 message ValueResponse {
    Value value = 1;
    optional KeyHint keyHint = 2;
@@ -266,6 +271,7 @@ service FastCacheGrpcService{
     rpc createList(CreateListRequest) returns (KeyHintResponse){} 
     rpc createQueue(CreateQueueRequest) returns (KeyHintResponse){} 
     rpc getList(GetRequest) returns (stream BatchValueResponse){}
+    rpc getSize(GetRequest) returns (IntResponse){}
     rpc getVector(GetRequest) returns (stream BatchValueResponse){}
     rpc getAndRemoveFront(GetRequest) returns (ValueResponse){}
     rpc getTail(GetRequest) returns (ValueResponse){}

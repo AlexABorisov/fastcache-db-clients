@@ -2,12 +2,11 @@ package com.fastcache.client.standalone;
 
 import com.fastcache.client.FastCacheAsyncClient;
 import com.fastcache.grpc.BoolResponse;
+import com.fastcache.grpc.KeyHint;
 import com.fastcache.grpc.KeyHintResponse;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
@@ -19,38 +18,29 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
-public class AdvancedCollectionsTest {
+public class AdvancedCollectionsTest extends TestBase {
 
-    private FastCacheAsyncClient client;
 
-    @BeforeEach
-    void init() {
-        client = new FastCacheAsyncClient("127.0.0.1", 50000);
-    }
 
-    @AfterEach
-    void stop() throws InterruptedException {
-        client.shutdown();
-    }
 
     @Test
     void testHeadAndPositionalAddition() throws ExecutionException, InterruptedException {
         String listKey = "headPosKey";
         // Start with a list: [Middle]
-        KeyHintResponse keyHintResponse = client.createListAsync(listKey, List.of("Middle".getBytes(StandardCharsets.UTF_8)))
+        KeyHint keyHintResponse = client.createList(listKey, List.of("Middle".getBytes(StandardCharsets.UTF_8)))
                 .get();
 
-        // addElementToHeadAsync -> [Head, Middle]
-        Boolean boolResponse = client.addElementToHeadAsync(listKey,
+        // addElementToHead -> [Head, Middle]
+        Boolean boolResponse = client.addElementToHead(listKey,
                                                             List.of("Head".getBytes(StandardCharsets.UTF_8)))
                 .get();
 
-        // addElementToPositionAsync at 1 -> [Head, NewPos1, Middle]
-        Boolean boolResponse1 = client.addElementToPositionAsync(listKey, List.of(
+        // addElementToPosition at 1 -> [Head, NewPos1, Middle]
+        Boolean boolResponse1 = client.addElementToPosition(listKey, List.of(
                                                                       "NewPos1".getBytes(StandardCharsets.UTF_8)),
                                                                  1).get();
 
-        byte[] head = client.getHeadAsync(listKey).get();
+        byte[] head = client.getHead(listKey).get();
         byte[] pos1 = client.getElementAtPositionAsync(listKey, 1).get();
 
         Assertions.assertEquals("Head", new String(head));
@@ -61,11 +51,11 @@ public class AdvancedCollectionsTest {
     void testTailAndPositionalRemoval() throws ExecutionException, InterruptedException {
         String vecKey = "removePosKey";
         // Setup Vector: [0, 1, 2]
-        client.createVectorAsync(vecKey, List.of("0".getBytes())).get();
-        client.addElementToTailAsync(vecKey, Arrays.asList("1".getBytes(), "2".getBytes())).get();
+        client.createVector(vecKey, List.of("0".getBytes())).get();
+        client.addElementToTail(vecKey, Arrays.asList("1".getBytes(), "2".getBytes())).get();
 
-        // removeTailAsync -> [0, 1]
-        client.removeTailAsync(vecKey).get();
+        // removeTail -> [0, 1]
+        client.removeTail(vecKey).get();
 
         // removeElementAtPositionAsync at 0 -> [1]
         client.removeElementAtPositionAsync(vecKey, 0).get();
@@ -78,8 +68,8 @@ public class AdvancedCollectionsTest {
 //    void testStreamAndRemoveRangeList() throws InterruptedException, ExecutionException {
 //        String key = "rangeStreamRemoveKey";
 //        // Setup: [A, B, C, D, E]
-//        client.createListAsync(key, "A".getBytes()).get();
-//        client.addElementToTailAsync(key,
+//        client.createList(key, "A".getBytes()).get();
+//        client.addElementToTail(key,
 //                                     Arrays.asList("B".getBytes(),
 //                                                   "C".getBytes(),
 //                                                   "D".getBytes(),
@@ -105,7 +95,7 @@ public class AdvancedCollectionsTest {
 //        Assertions.assertEquals("D", removedValues.get(2));
 //
 //        // Final check: Should only have [A, E]
-//        byte[] head = client.getHeadAsync(key).get();
+//        byte[] head = client.getHead(key).get();
 //        byte[] tail = client.getTailAsync(key).get();
 //        Assertions.assertEquals("A", new String(head));
 //        Assertions.assertEquals("E", new String(tail));
@@ -114,9 +104,9 @@ public class AdvancedCollectionsTest {
     @Test
     void testRemoveElementInRangeSuccess() throws ExecutionException, InterruptedException {
         String key = "boolRangeKey";
-        client.createVectorAsync(key, List.of("0".getBytes())).get();
+        client.createVector(key, List.of("0".getBytes())).get();
         for (int i = 1; i < 5; i++) {
-            client.addElementToTailAsync(key, List.of(String.valueOf(i).getBytes())).get();
+            client.addElementToTail(key, List.of(String.valueOf(i).getBytes())).get();
         }
 
 
@@ -129,12 +119,12 @@ public class AdvancedCollectionsTest {
     @Test
     void testQueueTypeSafety() throws ExecutionException, InterruptedException {
         String qKey = "strictQueue";
-        client.createQueueAsync(qKey, List.of("q1".getBytes())).get();
+        client.createQueue(qKey, List.of("q1".getBytes())).get();
 
         // Queues typically don't support positional addition in many implementations.
         // If your server returns an error for positional ops on Queues, this test verifies that.
         try {
-            client.addElementToPositionAsync(qKey, List.of("fail".getBytes()), 1).get();
+            client.addElementToPosition(qKey, List.of("fail".getBytes()), 1).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
             // Expecting an error code if Queues are strictly FIFO

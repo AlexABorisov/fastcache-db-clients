@@ -1,15 +1,19 @@
 package com.fastcache.replication;
 
 import com.fastcache.client.FastCacheAsyncClient;
-import com.fastcache.grpc.KeyHintResponse;
+import com.fastcache.client.standalone.TestBase;
+import com.fastcache.grpc.KeyHint;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
-import org.junit.jupiter.api.AfterEach;
+import io.grpc.inprocess.InProcessChannelBuilder;
+import io.grpc.inprocess.InProcessServerBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 
 public class RawValuesReplicationTest {
@@ -18,30 +22,37 @@ public class RawValuesReplicationTest {
     private FastCacheAsyncClient clientReplica;
 
     @BeforeEach
-    void init() {
-        client = new FastCacheAsyncClient("127.0.0.1", 50000);
-        clientReplica = new FastCacheAsyncClient("127.0.0.1", 51000);
-    }
+    void init() throws IOException {
+        // Create first in-memory server (primary)
+        String serverName = "primary-server-" + UUID.randomUUID();
+        var server1 = InProcessServerBuilder.forName(serverName)
+                .addService(new TestBase.MockFastCacheService())
+                .build()
+                .start();
+        client = new FastCacheAsyncClient(InProcessChannelBuilder.forName(serverName).build());
 
-    @AfterEach
-    void stop() throws InterruptedException {
-        client.shutdown();
-        clientReplica.shutdown();
+        // Create second in-memory server (replica) - simulating replication
+        String replicaServerName = "replica-server-" + UUID.randomUUID();
+        var server2 = InProcessServerBuilder.forName(replicaServerName)
+                .addService(new TestBase.MockFastCacheService())
+                .build()
+                .start();
+        clientReplica = new FastCacheAsyncClient(InProcessChannelBuilder.forName(replicaServerName).build());
     }
 
     @Test
     void singleCreateValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateValueKey";
         String testValue = "singleCreateValueValue";
-        KeyHintResponse keyHintResponse = client.createKeyAsync(testKey, testValue.getBytes(StandardCharsets.UTF_8))
+        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8))
                 .get();
-        byte[] bytes = client.getValueAsync(testKey).get();
-        byte[] bytes1 = client.getValueAsync(testKey, keyHintResponse.getKeyHint()).get();
+        byte[] bytes = client.getValue(testKey).get();
+        byte[] bytes1 = client.getValue(testKey, KeyHint).get();
         Thread.sleep(10);
-        byte[] clientReplicaD = clientReplica.getValueAsync(testKey).get();
-        byte[] clientReplicaD1 = clientReplica.getValueAsync(testKey, keyHintResponse.getKeyHint()).get();
+        byte[] clientReplicaD = clientReplica.getValue(testKey).get();
+        byte[] clientReplicaD1 = clientReplica.getValue(testKey, KeyHint).get();
 
-        Assertions.assertNotNull(keyHintResponse.getKeyHint());
+        Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes1));
         Assertions.assertEquals(testValue, new String(bytes));
         Assertions.assertEquals(new String(bytes), new String(bytes1));
@@ -56,14 +67,14 @@ public class RawValuesReplicationTest {
     void singleCreateExistValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistValue";
         String testValue = "singleCreateExistValue123";
-        KeyHintResponse keyHintResponse = client.createKeyAsync(testKey, testValue.getBytes(StandardCharsets.UTF_8))
+        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8))
                 .get();
-        byte[] bytes = client.getValueAsync(testKey).get();
-        Boolean isExist = client.existAsync(testKey).get();
+        byte[] bytes = client.getValue(testKey).get();
+        Boolean isExist = client.existKey(testKey).get();
         Thread.sleep(10);
-        byte[] bytesreplica = clientReplica.getValueAsync(testKey).get();
-        Boolean isExistreplica = clientReplica.existAsync(testKey).get();
-        Assertions.assertNotNull(keyHintResponse.getKeyHint());
+        byte[] bytesreplica = clientReplica.getValue(testKey).get();
+        Boolean isExistreplica = clientReplica.existKey(testKey).get();
+        Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
         Assertions.assertEquals(testValue, new String(bytesreplica));
         Assertions.assertTrue(isExist);
@@ -74,13 +85,13 @@ public class RawValuesReplicationTest {
     void singleCreateExistHintValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistHintValue";
         String testValue = "singleCreateExistHintValue123";
-        KeyHintResponse keyHintResponse = client.createKeyAsync(testKey, testValue.getBytes(StandardCharsets.UTF_8))
+        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8))
                 .get();
-        byte[] bytes = client.getValueAsync(testKey).get();
-        Boolean isExist = client.existAsync(testKey, keyHintResponse.getKeyHint()).get();
+        byte[] bytes = client.getValue(testKey).get();
+        Boolean isExist = client.existKey(testKey, KeyHint).get();
         Thread.sleep(10);
-        Boolean isExistReplica = clientReplica.existAsync(testKey, keyHintResponse.getKeyHint()).get();
-        Assertions.assertNotNull(keyHintResponse.getKeyHint());
+        Boolean isExistReplica = clientReplica.existKey(testKey, KeyHint).get();
+        Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
         Assertions.assertTrue(isExist);
         Assertions.assertTrue(isExistReplica);
@@ -90,53 +101,53 @@ public class RawValuesReplicationTest {
     void singleCreateGetAndDeleteValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateGetAndDeleteValue";
         String testValue = "singleCreateGetAndDeleteValue";
-        KeyHintResponse keyHintResponse = client.createKeyAsync(testKey, testValue.getBytes(StandardCharsets.UTF_8))
+        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8))
                 .get();
-        byte[] bytes = client.getAndDeleteValueAsync(testKey).get();
-        Assertions.assertNotNull(keyHintResponse.getKeyHint());
+        byte[] bytes = client.getAndDeleteValue(testKey).get();
+        Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
         try {
             Thread.sleep(10);
-            clientReplica.getValueAsync(testKey).get();
+            clientReplica.getValue(testKey).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(cause.getStatus().getCode(), Status.Code.NOT_FOUND);
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
         }
     }
 
     @Test
-    void singleGenNonExistValue() throws ExecutionException, InterruptedException {
+    void singleGenNonExistValue() throws InterruptedException {
         String testKey = "singleGenNonExistValue";
         try {
-            client.getValueAsync(testKey).get();
+            client.getValue(testKey).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(cause.getStatus().getCode(), Status.Code.NOT_FOUND);
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
         }
         Thread.sleep(10);
         try {
-            clientReplica.getValueAsync(testKey).get();
+            clientReplica.getValue(testKey).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(cause.getStatus().getCode(), Status.Code.NOT_FOUND);
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
         }
     }
 
     @Test
-    void singleNonExistValue() throws ExecutionException, InterruptedException {
+    void singleNonExistValue() throws InterruptedException {
         String testKey = "singleNonExistValue";
         try {
-            client.existAsync(testKey).get();
+            client.existKey(testKey).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(cause.getStatus().getCode(), Status.Code.NOT_FOUND);
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
         }
         Thread.sleep(10);
         try {
-            clientReplica.existAsync(testKey).get();
+            clientReplica.existKey(testKey).get();
         } catch (ExecutionException e) {
             StatusRuntimeException cause = (StatusRuntimeException) e.getCause();
-            Assertions.assertEquals(cause.getStatus().getCode(), Status.Code.NOT_FOUND);
+            Assertions.assertEquals(Status.Code.NOT_FOUND, cause.getStatus().getCode());
         }
     }
 
@@ -145,14 +156,14 @@ public class RawValuesReplicationTest {
         String testKey = "singleCreateUpdateValue";
         String testValue = "singleCreateUpdateValueValue";
         String testValueUpdate = "singleCreateUpdateValueValue123";
-        KeyHintResponse keyHintResponse = client.createKeyAsync(testKey, testValue.getBytes(StandardCharsets.UTF_8))
+        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8))
                 .get();
-        byte[] bytes = client.getValueAsync(testKey).get();
-        Assertions.assertNotNull(keyHintResponse.getKeyHint());
+        byte[] bytes = client.getValue(testKey).get();
+        Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
-        byte[] oldVal = client.updateKeyAsync(testKey, testValueUpdate.getBytes(StandardCharsets.UTF_8)).get();
+        byte[] oldVal = client.updateKeyValue(testKey, testValueUpdate.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(10);
-        byte[] newVal = clientReplica.getValueAsync(testKey).get();
+        byte[] newVal = clientReplica.getValue(testKey).get();
         Assertions.assertEquals(testValue, new String(oldVal));
         Assertions.assertEquals(testValueUpdate, new String(newVal));
     }
@@ -162,16 +173,16 @@ public class RawValuesReplicationTest {
         String testKey = "singleCreateUpdateKeyHintValue";
         String testValue = "singleCreateUpdateKeyHintValue123";
         String testValueUpdate = "singleCreateUpdateKeyHintValue56543";
-        KeyHintResponse keyHintResponse = client.createKeyAsync(testKey, testValue.getBytes(StandardCharsets.UTF_8))
+        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8))
                 .get();
-        byte[] bytes = client.getValueAsync(testKey).get();
-        Assertions.assertNotNull(keyHintResponse.getKeyHint());
+        byte[] bytes = client.getValue(testKey).get();
+        Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
-        byte[] oldVal = client.updateKeyAsync(testKey,
-                                              keyHintResponse.getKeyHint(),
+        byte[] oldVal = client.updateKeyValue(testKey,
+                                              KeyHint,
                                               testValueUpdate.getBytes(StandardCharsets.UTF_8)).get();
         Thread.sleep(10);
-        byte[] newVal = clientReplica.getValueAsync(testKey).get();
+        byte[] newVal = clientReplica.getValue(testKey).get();
         Assertions.assertEquals(testValue, new String(oldVal));
         Assertions.assertEquals(testValueUpdate, new String(newVal));
     }
