@@ -1,5 +1,6 @@
-package com.fastcache.client.standalone;
+package com.fastcache.client.standalone.simple;
 
+import com.fastcache.TestBase;
 import com.fastcache.grpc.LockStatus;
 import com.fastcache.grpc.LockType;
 import io.grpc.Status;
@@ -20,8 +21,8 @@ public class LockingValuesTest extends TestBase {
     void testUnanimousLockAndAnyUnlock() throws ExecutionException, InterruptedException {
         // Ensure the object exists in the cache before testing locks
         try {
-            client.remove(lockKey,0xFFFFFFFF).get();
-        }catch (Exception e){
+            client.remove(lockKey, 0xFFFFFFFF).get();
+        } catch (Exception e) {
             //ignore
         }
         client.createKeyValue(lockKey, "initial_data".getBytes(StandardCharsets.UTF_8)).get();
@@ -33,9 +34,7 @@ public class LockingValuesTest extends TestBase {
         // 2. Unlock by a different client (clientId = 999)
         // Logic: if lockedBy == 0, anyone can unlock.
         LockStatus unlockRes = client.unlockObject(lockKey, 999).get();
-        Assertions.assertEquals(LockStatus.OK,
-                                unlockRes,
-                                "Any client should be able to unlock a unanimous lock");
+        Assertions.assertEquals(LockStatus.OK, unlockRes, "Any client should be able to unlock a unanimous lock");
     }
 
     @Test
@@ -43,8 +42,8 @@ public class LockingValuesTest extends TestBase {
         int ownerId = 100;
         int intruderId = 200;
         try {
-            client.remove(lockKey,0xFFFFFFFF).get();
-        }catch (Exception e){
+            client.remove(lockKey, 0xFFFFFFFF).get();
+        } catch (Exception e) {
             //ignore
         }
         client.createKeyValue(lockKey, "initial_data".getBytes(StandardCharsets.UTF_8)).get();
@@ -67,8 +66,8 @@ public class LockingValuesTest extends TestBase {
     void testLockingConflict() throws ExecutionException, InterruptedException {
         // 1. Client A locks the object
         try {
-            client.remove(lockKey,0xFFFFFFFF).get();
-        }catch (Exception e){
+            client.remove(lockKey, 0xFFFFFFFF).get();
+        } catch (Exception e) {
             //ignore
         }
         client.createKeyValue(lockKey, "initial_data".getBytes(StandardCharsets.UTF_8)).get();
@@ -83,8 +82,8 @@ public class LockingValuesTest extends TestBase {
     void testUnanimousLockBlocksSpecificLock() throws ExecutionException, InterruptedException {
         // 1. Locked by 0
         try {
-            client.remove(lockKey,0xFFFFFFFF).get();
-        }catch (Exception e){
+            client.remove(lockKey, 0xFFFFFFFF).get();
+        } catch (Exception e) {
             //ignore
         }
         client.createKeyValue(lockKey, "initial_data".getBytes(StandardCharsets.UTF_8)).get();
@@ -99,13 +98,13 @@ public class LockingValuesTest extends TestBase {
     void testUnlockOnExpiredObject() throws ExecutionException, InterruptedException {
         // 1. Lock with very short TTL
         try {
-            client.remove(lockKey,0xFFFFFFFF).get();
-        }catch (Exception e){
+            client.remove(lockKey, 0xFFFFFFFF).get();
+        } catch (Exception e) {
             //ignore
         }
         client.createKeyValue(lockKey, "initial_data".getBytes(StandardCharsets.UTF_8)).get();
         LockStatus lockStatus = client.lockObject(lockKey, LockType.WRITE_LOCK, 555, Duration.ofSeconds(1)).get();
-        Assertions.assertEquals(LockStatus.OK,lockStatus);
+        Assertions.assertEquals(LockStatus.OK, lockStatus);
 
         // 2. Wait for TTL to expire on the i9 server
         Thread.sleep(TimeUnit.SECONDS.toMillis(5));
@@ -122,8 +121,8 @@ public class LockingValuesTest extends TestBase {
         int ownerId = 1;
         int intruderId = 2;
         try {
-            client.remove(key,0xFFFFFFFF).get();
-        }catch (Exception e){
+            client.remove(key, 0xFFFFFFFF).get();
+        } catch (Exception e) {
             //ignore
         }
         // 1. Create and then Lock Globally

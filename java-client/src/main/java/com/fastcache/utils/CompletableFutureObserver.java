@@ -10,6 +10,7 @@ public class CompletableFutureObserver<T,VAL> implements StreamObserver<T> {
     protected final Function<T, VAL> function;
     protected VAL value;
 
+
     public CompletableFutureObserver(CompletableFuture<VAL> future){
         this(future,t -> (VAL)t);
     }

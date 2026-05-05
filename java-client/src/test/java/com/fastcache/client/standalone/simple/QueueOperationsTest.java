@@ -1,6 +1,6 @@
-package com.fastcache.client.standalone;
+package com.fastcache.client.standalone.simple;
 
-import com.fastcache.client.FastCacheAsyncClient;
+import com.fastcache.TestBase;
 import com.fastcache.grpc.KeyHint;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -14,7 +14,6 @@ import java.util.concurrent.ExecutionException;
 
 public class QueueOperationsTest extends TestBase {
 
-
     @Test
     void testQueueLifecycle() throws ExecutionException, InterruptedException {
         String qKey = "fifoQueue";
@@ -26,8 +25,7 @@ public class QueueOperationsTest extends TestBase {
         Assertions.assertNotNull(createRes);
 
         // 2. addElementToTail
-        boolean added = client.addElementToTail(qKey, List.of(second.getBytes(StandardCharsets.UTF_8)))
-                .get();
+        boolean added = client.addElementToTail(qKey, List.of(second.getBytes(StandardCharsets.UTF_8))).get();
 
         Assertions.assertTrue(added);
 

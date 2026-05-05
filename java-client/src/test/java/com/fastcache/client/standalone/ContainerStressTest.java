@@ -1,6 +1,7 @@
-package com.fastcache.client;
+package com.fastcache.client.standalone;
 
-import com.fastcache.client.standalone.TestBase;
+import com.fastcache.TestBase;
+import com.fastcache.client.FastCacheAsyncSimpleClient;
 import com.fastcache.grpc.LockType;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;
@@ -26,11 +27,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class ContainerStressTest {
 
-    private FastCacheAsyncClient client;
     private final int THREAD_COUNT = 32; // Matching i9 logical cores
     private final int OPS_PER_THREAD = 5000;
     private final String QUEUE_KEY = "stress_queue_01";
     private final String LIST_KEY = "stress_list_01";
+    private FastCacheAsyncSimpleClient client;
 
     @BeforeEach
     void init() throws IOException {
@@ -39,7 +40,7 @@ public class ContainerStressTest {
                 .addService(new TestBase.MockFastCacheService())
                 .build()
                 .start();
-        client = new FastCacheAsyncClient(InProcessChannelBuilder.forName(serverName).build(), 999);
+        client = new FastCacheAsyncSimpleClient(InProcessChannelBuilder.forName(serverName).build(), 999);
     }
 
     @AfterEach
@@ -87,7 +88,9 @@ public class ContainerStressTest {
         long end = System.currentTimeMillis();
 
         System.out.printf("Queue Stress Finished: %d ops in %d ms (Avg: %.2f ops/sec)%n",
-                successCount.get(), (end - start), (successCount.get() / ((end - start) / 1000.0)));
+                          successCount.get(),
+                          (end - start),
+                          (successCount.get() / ((end - start) / 1000.0)));
 
         executor.shutdown();
     }
@@ -122,7 +125,9 @@ public class ContainerStressTest {
         long end = System.currentTimeMillis();
 
         System.out.printf("Vector Shard Stress: %d appends in %d ms (Avg: %.2f ops/sec)%n",
-                futures.size(), (end - start), (futures.size() / ((end - start) / 1000.0)));
+                          futures.size(),
+                          (end - start),
+                          (futures.size() / ((end - start) / 1000.0)));
 
         executor.shutdown();
     }
@@ -163,11 +168,12 @@ public class ContainerStressTest {
         long end = System.currentTimeMillis();
 
         System.out.printf("Queue Stress Finished: %d ops in %d ms (Avg: %.2f ops/sec)%n",
-                successCount.get(), (end - start), (successCount.get() / ((end - start) / 1000.0)));
+                          successCount.get(),
+                          (end - start),
+                          (successCount.get() / ((end - start) / 1000.0)));
 
         executor.shutdown();
     }
-
 
     @Test
     void testLockPermissionStress() throws Exception {

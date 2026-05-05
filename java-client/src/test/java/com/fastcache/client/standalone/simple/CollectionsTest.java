@@ -1,12 +1,12 @@
-package com.fastcache.client.standalone;
+package com.fastcache.client.standalone.simple;
 
+import com.fastcache.TestBase;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
@@ -24,7 +24,7 @@ public class CollectionsTest extends TestBase {
         client.addElementToTail(listKey, List.of("tail".getBytes())).get();
 
         // Get Position
-        byte[] posVal = client.getElementAtPositionAsync(listKey, 1).get();
+        byte[] posVal = client.getElementAtPosition(listKey, 1).get();
         Assertions.assertEquals("tail", new String(posVal));
 
         // Remove Head
@@ -39,8 +39,6 @@ public class CollectionsTest extends TestBase {
         for (int i = 1; i < 10; i++) {
             client.addElementToTail(rangeKey, List.of(String.valueOf(i).getBytes())).get();
         }
-
-
 
         // Get elements from index 2 to 5
         List<byte[]> rangeData = client.streamElementInRange(rangeKey, false, 2, 5).get();
@@ -77,8 +75,6 @@ public class CollectionsTest extends TestBase {
         // Add second element
         client.addElementToTail(key, List.of(val2.getBytes(StandardCharsets.UTF_8))).get();
 
-
-
         List<String> results = client.streamList(key).get().stream().map(String::new).toList();
 
         Assertions.assertEquals(2, results.size());
@@ -111,7 +107,7 @@ public class CollectionsTest extends TestBase {
         Assertions.assertEquals("head", new String(front));
 
         // Get Tail
-        byte[] tail = client.getTailAsync(key).get();
+        byte[] tail = client.getTail(key).get();
         Assertions.assertEquals("tail", new String(tail));
     }
 
@@ -135,11 +131,11 @@ public class CollectionsTest extends TestBase {
         String key = "posTestKeyVector";
         client.createVector(key, List.of("pos0".getBytes(StandardCharsets.UTF_8))).get();
         client.addElementToTail(key,
-                                     Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
-                                                   "pos2".getBytes(StandardCharsets.UTF_8))).get();
+                                Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
+                                              "pos2".getBytes(StandardCharsets.UTF_8))).get();
 
         // Get At Position 1
-        byte[] pos1 = client.getElementAtPositionAsync(key, 1).get();
+        byte[] pos1 = client.getElementAtPosition(key, 1).get();
         Assertions.assertEquals("pos1", new String(pos1));
 
         // Remove At Position 1
@@ -153,7 +149,7 @@ public class CollectionsTest extends TestBase {
         System.out.println(results);
 
         // Verify Shift
-        byte[] newPos1 = client.getElementAtPositionAsync(key, 1).get();
+        byte[] newPos1 = client.getElementAtPosition(key, 1).get();
         Assertions.assertEquals("pos2", new String(newPos1));
     }
 
@@ -162,23 +158,22 @@ public class CollectionsTest extends TestBase {
         String key = "posTestKeyList";
         client.createList(key, List.of("pos0".getBytes(StandardCharsets.UTF_8))).get();
         client.addElementToTail(key,
-                                     Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
-                                                   "pos2".getBytes(StandardCharsets.UTF_8))).get();
+                                Arrays.asList("pos1".getBytes(StandardCharsets.UTF_8),
+                                              "pos2".getBytes(StandardCharsets.UTF_8))).get();
 
         // Get At Position 1
-        byte[] pos1 = client.getElementAtPositionAsync(key, 1).get();
+        byte[] pos1 = client.getElementAtPosition(key, 1).get();
         Assertions.assertEquals("pos1", new String(pos1));
 
         // Remove At Position 1
         byte[] removed = client.getAndRemoveElementAtPosition(key, 1).get();
         Assertions.assertEquals("pos1", new String(removed));
 
-
         List<byte[]> results = client.streamList(key).get();
 
         System.out.println(results);
         // Verify Shift
-        byte[] newPos1 = client.getElementAtPositionAsync(key, 1).get();
+        byte[] newPos1 = client.getElementAtPosition(key, 1).get();
         Assertions.assertEquals("pos2", new String(newPos1));
     }
 

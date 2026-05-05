@@ -1,17 +1,16 @@
-package com.fastcache.client.standalone;
+package com.fastcache.client.cluster.smart;
 
-import com.fastcache.client.FastCacheAsyncClient;
-import com.fastcache.grpc.LockResponse;
+import com.fastcache.TestBase;
+import com.fastcache.TestBaseCluster;
 import com.fastcache.grpc.LockStatus;
 import com.fastcache.grpc.LockType;
-import com.fastcache.grpc.TtlResponse;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 
-public class ControlOperationsTest extends TestBase {
+public class ControlOperationsTest extends TestBaseCluster {
 
     @Test
     void testTtlMethods() throws ExecutionException, InterruptedException {
@@ -33,7 +32,7 @@ public class ControlOperationsTest extends TestBase {
         client.createKeyValue(lockKey, "secure_data".getBytes()).get();
 
         // Client 1 acquires lock
-        LockStatus lockRes = client.lockObject(lockKey, LockType.WRITE_LOCK, 101, Duration.ofSeconds(30) ).get();
+        LockStatus lockRes = client.lockObject(lockKey, LockType.WRITE_LOCK, 101, Duration.ofSeconds(30)).get();
         Assertions.assertEquals(LockStatus.OK, lockRes);
 
         // Client 2 attempts to lock (should fail based on server logic)

@@ -1,5 +1,6 @@
-package com.fastcache.client.standalone;
+package com.fastcache.client.standalone.simple;
 
+import com.fastcache.TestBase;
 import com.fastcache.grpc.LockStatus;
 import com.fastcache.grpc.LockType;
 import io.grpc.Status;
@@ -28,13 +29,13 @@ public class LockMethodProtectionTest extends TestBase {
     @DisplayName("GLOBAL Lock: Blocks Unary Get/Update/Remove from others")
     void testGlobalLockUnaryProtection() throws Exception {
         try {
-            client.remove(testKey,0xFFFFFFFF).get();
-        }catch (Exception e){
+            client.remove(testKey, 0xFFFFFFFF).get();
+        } catch (Exception e) {
             //ignore
         }
 
         // Ensure object exists
-        client.createKeyValue(testKey, "initial_value".getBytes(StandardCharsets.UTF_8),ownerId).get();
+        client.createKeyValue(testKey, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId).get();
 
         // Owner locks GLOBAL
         client.lockObject(testKey, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
@@ -54,12 +55,12 @@ public class LockMethodProtectionTest extends TestBase {
     void testGlobalLockCollectionProtection() throws Exception {
         String listKey = "global_list";
         try {
-            client.remove(listKey,0xFFFFFFFF).get();
-        }catch ( Exception e){
+            client.remove(listKey, 0xFFFFFFFF).get();
+        } catch (Exception e) {
             //ignore
         }
 
-        client.createList(listKey, List.of("item1".getBytes()),ownerId).get();
+        client.createList(listKey, List.of("item1".getBytes()), ownerId).get();
         client.lockObject(listKey, LockType.GLOBAL, ownerId, Duration.ofSeconds(30)).get();
 
         // 1. Intruder tries getFront
@@ -67,8 +68,8 @@ public class LockMethodProtectionTest extends TestBase {
 
         // 2. Intruder tries addElementToTail
         assertPermissionDenied(() -> client.addElementToTail(listKey,
-                                                                  Collections.singletonList("item2".getBytes()),
-                                                                  intruderId).get());
+                                                             Collections.singletonList("item2".getBytes()),
+                                                             intruderId).get());
     }
 
     // --- SECTION 2: WRITE LOCK PROTECTION ---
@@ -77,11 +78,11 @@ public class LockMethodProtectionTest extends TestBase {
     @DisplayName("WRITE Lock: Allows Shared Read but Blocks Intruder Write")
     void testWriteLockProtection() throws Exception {
         try {
-            client.remove(testKey,0xFFFFFFFF).get();
-        }catch (Exception e){
+            client.remove(testKey, 0xFFFFFFFF).get();
+        } catch (Exception e) {
             //ignore
         }
-        client.createKeyValue(testKey, "initial_value".getBytes(StandardCharsets.UTF_8),ownerId).get();
+        client.createKeyValue(testKey, "initial_value".getBytes(StandardCharsets.UTF_8), ownerId).get();
 
         client.lockObject(testKey, LockType.WRITE_LOCK, ownerId, Duration.ofSeconds(30)).get();
 
@@ -103,8 +104,8 @@ public class LockMethodProtectionTest extends TestBase {
     @DisplayName("READ Lock: Blocks all Writes but allows all Reads")
     void testReadLockProtection() throws Exception {
         try {
-            client.remove(testKey,0xFFFFFFFF).get();
-        }catch (Exception e){
+            client.remove(testKey, 0xFFFFFFFF).get();
+        } catch (Exception e) {
             //ignore
         }
         client.createKeyValue(testKey, "initial_value".getBytes(StandardCharsets.UTF_8)).get();
@@ -126,8 +127,8 @@ public class LockMethodProtectionTest extends TestBase {
     @DisplayName("Compatibility: Cannot acquire WRITE if READ exists")
     void testLockCompatibility() throws Exception {
         try {
-            client.remove(testKey,0xFFFFFFFF).get();
-        }catch (Exception e){
+            client.remove(testKey, 0xFFFFFFFF).get();
+        } catch (Exception e) {
             //ignore
         }
         client.createKeyValue(testKey, "initial_value".getBytes(StandardCharsets.UTF_8)).get();

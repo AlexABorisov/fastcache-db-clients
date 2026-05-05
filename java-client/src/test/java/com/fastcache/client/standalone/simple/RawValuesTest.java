@@ -1,6 +1,6 @@
-package com.fastcache.client.standalone;
+package com.fastcache.client.standalone.simple;
 
-import com.fastcache.grpc.KeyHint;
+import com.fastcache.TestBase;
 import com.fastcache.grpc.KeyHint;
 import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
@@ -16,8 +16,7 @@ public class RawValuesTest extends TestBase {
     void singleCreateValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateValueKey";
         String testValue = "singleCreateValueValue";
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8))
-                .get();
+        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         byte[] bytes = client.getValue(testKey).get();
         byte[] bytes1 = client.getValue(testKey, KeyHint).get();
         Assertions.assertNotNull(KeyHint);
@@ -30,8 +29,7 @@ public class RawValuesTest extends TestBase {
     void singleCreateExistValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistValue";
         String testValue = "singleCreateExistValue123";
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8))
-                .get();
+        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         byte[] bytes = client.getValue(testKey).get();
         Boolean isExist = client.existKey(testKey).get();
         Assertions.assertNotNull(KeyHint);
@@ -43,8 +41,7 @@ public class RawValuesTest extends TestBase {
     void singleCreateExistHintValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateExistHintValue";
         String testValue = "singleCreateExistHintValue123";
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8))
-                .get();
+        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         byte[] bytes = client.getValue(testKey).get();
         Boolean isExist = client.existKey(testKey, KeyHint).get();
         Assertions.assertNotNull(KeyHint);
@@ -56,8 +53,7 @@ public class RawValuesTest extends TestBase {
     void singleCreateGetAndDeleteValue() throws ExecutionException, InterruptedException {
         String testKey = "singleCreateGetAndDeleteValue";
         String testValue = "singleCreateGetAndDeleteValue";
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8))
-                .get();
+        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         byte[] bytes = client.getAndDeleteValue(testKey).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
@@ -96,8 +92,7 @@ public class RawValuesTest extends TestBase {
         String testKey = "singleCreateUpdateValue";
         String testValue = "singleCreateUpdateValueValue";
         String testValueUpdate = "singleCreateUpdateValueValue123";
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8))
-                .get();
+        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         byte[] bytes = client.getValue(testKey).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
@@ -112,14 +107,11 @@ public class RawValuesTest extends TestBase {
         String testKey = "singleCreateUpdateKeyHintValue";
         String testValue = "singleCreateUpdateKeyHintValue123";
         String testValueUpdate = "singleCreateUpdateKeyHintValue56543";
-        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8))
-                .get();
+        KeyHint KeyHint = client.createKeyValue(testKey, testValue.getBytes(StandardCharsets.UTF_8)).get();
         byte[] bytes = client.getValue(testKey).get();
         Assertions.assertNotNull(KeyHint);
         Assertions.assertEquals(testValue, new String(bytes));
-        byte[] oldVal = client.updateKeyValue(testKey,
-                                              KeyHint,
-                                              testValueUpdate.getBytes(StandardCharsets.UTF_8)).get();
+        byte[] oldVal = client.updateKeyValue(testKey, KeyHint, testValueUpdate.getBytes(StandardCharsets.UTF_8)).get();
         byte[] newVal = client.getValue(testKey).get();
         Assertions.assertEquals(testValue, new String(oldVal));
         Assertions.assertEquals(testValueUpdate, new String(newVal));

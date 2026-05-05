@@ -3,6 +3,7 @@ package com.fastcache.utils;
 import com.fastcache.grpc.BinaryPayload;
 import com.fastcache.grpc.CompressedInfo;
 import com.fastcache.grpc.Key;
+import com.fastcache.grpc.KeyHint;
 import com.fastcache.grpc.UpdateValueResponse;
 import com.fastcache.grpc.Value;
 import com.fastcache.grpc.ValueResponse;
@@ -15,9 +16,6 @@ public class CompressionUtils {
     private static final LZ4Factory factory = LZ4Factory.fastestInstance();
     private static final int COMPRESSION_THRESHOLD = 1024; // 1KB
 
-    public static Key compressKeyIfNeeded(byte[] data) {
-        return compressKeyIfNeeded(data,null).build();
-    }
 
     public static Key.Builder compressKeyIfNeeded(byte[] data,Integer clientId) {
         BinaryPayload.Builder payloadBuilder = BinaryPayload.newBuilder();

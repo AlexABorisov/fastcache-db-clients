@@ -1,7 +1,7 @@
-package com.fastcache.client;
+package com.fastcache.client.standalone;
 
-import com.fastcache.client.standalone.TestBase;
-import io.grpc.inprocess.InProcessChannelBuilder;
+import com.fastcache.TestBase;
+import com.fastcache.client.FastCacheAsyncSimpleClient;
 import io.grpc.inprocess.InProcessServerBuilder;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -25,10 +26,7 @@ public class FastCacheRawStressTest {
     @BeforeEach
     void init() throws IOException {
         serverName = "stress-server-" + UUID.randomUUID();
-        InProcessServerBuilder.forName(serverName)
-                .addService(new TestBase.MockFastCacheService())
-                .build()
-                .start();
+        InProcessServerBuilder.forName(serverName).addService(new TestBase.MockFastCacheService()).build().start();
     }
 
     @Test
@@ -45,25 +43,30 @@ public class FastCacheRawStressTest {
             final int threadId = i;
             executor.submit(() -> {
                 // Each thread gets its own Async Client (simulating multiple microservices)
-                FastCacheAsyncClient client = new FastCacheAsyncClient(
-                        InProcessChannelBuilder.forName(serverName).build());
-
+                FastCacheAsyncSimpleClient client[] = {new FastCacheAsyncSimpleClient("127.0.0.1",
+                                                                                      50000,
+                                                                                      Duration.ofSeconds(1)),
+                                                       new FastCacheAsyncSimpleClient("127.0.0.1",
+                                                                                      60000,
+                                                                                      Duration.ofSeconds(1))};
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
+                        int index = j % client.length;
                         String key = "stress:" + threadId + ":" + j;
                         byte[] data = ("value_data_" + j).getBytes(StandardCharsets.UTF_8);
 
                         // Mix of operations
                         try {
                             // 1. Write
-                            client.createKeyValue(key, data).get(5, TimeUnit.SECONDS);
+                            client[index].createKeyValue(key, data).get(5, TimeUnit.SECONDS);
 
                             // 2. Immediate Read
-                            byte[] result = client.getValue(key).get(5, TimeUnit.SECONDS);
+                            byte[] result = client[index].getValue(key).get(5, TimeUnit.SECONDS);
 
                             // 3. Update
-                            client.updateKeyValue(key, (new String(data) + "_updated").getBytes())
+                            client[index].updateKeyValue(key, (new String(data) + "_updated").getBytes())
                                     .get(5, TimeUnit.SECONDS);
+                            //client.remove(key).get();
 
                             if (result != null) {
                                 successCount.incrementAndGet();
@@ -73,11 +76,11 @@ public class FastCacheRawStressTest {
                         }
                     }
                 } finally {
-                    try {
-                        client.shutdown();
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
+
+                    for (int j = 0; j < client.length; j++) {
+                        client[j].shutdown();
                     }
+
                     latch.countDown();
                 }
             });
