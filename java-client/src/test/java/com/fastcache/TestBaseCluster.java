@@ -49,20 +49,12 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public abstract class TestBaseCluster {
 
-    protected FastCacheClientInterface client;
+    protected FastCacheAsyncSmartClient client;
     private Server server;
 
     @BeforeEach
     void setUp() throws IOException {
-        String property = System.getProperty("fake", "true");
-        if (Boolean.getBoolean(property)) {
-            String serverName = "test-server-" + UUID.randomUUID();
-            server = InProcessServerBuilder.forName(serverName).addService(new MockFastCacheService()).build().start();
-            client = new FastCacheAsyncSimpleClient(InProcessChannelBuilder.forName(serverName).build());
-        } else {
-            client = new FastCacheAsyncSmartClient("127.0.0.1", 61000,0, Duration.ofSeconds(3600));
-        }
-
+        client = new FastCacheAsyncSmartClient("127.0.0.1", 61000,0, Duration.ofSeconds(3600));
     }
 
     @AfterEach
