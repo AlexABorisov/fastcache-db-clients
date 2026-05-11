@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FastCacheRawStressTest {
 
     private final int THREAD_COUNT = 32; // Optimized for i9
-    private final int OPERATIONS_PER_THREAD = 100000;
+    private final int OPERATIONS_PER_THREAD = 1000000;
     private String serverName;
 
     @BeforeEach
@@ -202,10 +202,8 @@ public class FastCacheRawStressTest {
         }
 
         updateLatch.await(60, TimeUnit.MINUTES);
-        client.shutdown();
         long updateDuration = System.currentTimeMillis() - readStartTime;
         opsPerSec = (double) (THREAD_COUNT * OPERATIONS_PER_THREAD) / (updateDuration / 1000.0);
-        executor.shutdown();
 
         System.out.println("--- Stress Test Update Results ---");
         System.out.println("Total Operations: " + (THREAD_COUNT * OPERATIONS_PER_THREAD));
@@ -214,6 +212,60 @@ public class FastCacheRawStressTest {
         System.out.println("Duration: " + updateDuration + "ms");
         System.out.println("Throughput: " + String.format("%.2f", opsPerSec) + " ops/sec");
 
+
+        while (!client.getReadyFlag()) {
+            try {
+                Thread.sleep(TimeUnit.MILLISECONDS.toMillis(100));
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        CountDownLatch deleteLatch = new CountDownLatch(THREAD_COUNT);
+
+        AtomicInteger deleteSuccessCount = new AtomicInteger(0);
+        AtomicInteger deleteErrorCount = new AtomicInteger(0);
+        System.out.println("Real start delete");
+        readStartTime = System.currentTimeMillis();
+        for (int i = 0; i < THREAD_COUNT; i++) {
+            final int threadId = i;
+            executor.submit(() -> {
+                // Each thread gets its own Async Client (simulating multiple microservices)
+
+                try {
+                    for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
+                        String key = "stress:" + threadId + ":" + j;
+
+                        // Mix of operations
+                        try {
+
+                            KeyHint hint = storage.get(key);
+
+                            Boolean isGood = client.remove(key, hint).get(500, TimeUnit.MILLISECONDS);
+                            if (isGood) deleteSuccessCount.incrementAndGet();
+                            else deleteErrorCount.incrementAndGet();
+                        } catch (Exception e) {
+                            deleteErrorCount.incrementAndGet();
+                            System.err.println(e.getCause().getLocalizedMessage());
+                        }
+                    }
+                } finally {
+                    deleteLatch.countDown();
+                }
+            });
+        }
+
+        deleteLatch.await(60, TimeUnit.MINUTES);
+        client.shutdown();
+        long deleteDuration = System.currentTimeMillis() - readStartTime;
+        opsPerSec = (double) (THREAD_COUNT * OPERATIONS_PER_THREAD) / (updateDuration / 1000.0);
+        executor.shutdown();
+
+        System.out.println("--- Stress Test Update Results ---");
+        System.out.println("Total Operations: " + (THREAD_COUNT * OPERATIONS_PER_THREAD));
+        System.out.println("Successes: " + deleteSuccessCount.get());
+        System.out.println("Errors: " + deleteErrorCount.get());
+        System.out.println("Duration: " + deleteDuration + "ms");
+        System.out.println("Throughput: " + String.format("%.2f", opsPerSec) + " ops/sec");
     }
 
 }

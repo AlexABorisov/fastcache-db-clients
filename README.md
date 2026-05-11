@@ -1,6 +1,6 @@
-# FastCache 🚀
+[# FastCache 🚀
 
-**FastCache** is an ultra-high-performance, sharded gRPC cache server designed specifically for high-core-count architectures (Intel i9/Xeon). It combines the speed of C++ sharded memory management with a robust, multi-tenant locking system and a developer-friendly Java client.
+**FastCache** is an ultra-high-performance, sharded gRPC database server designed specifically for high-core-count architectures (Intel i9/Xeon). It combines the speed of C++ sharded memory management with a robust, multi-tenant locking system and a developer-friendly Java client.
 
 ---
 
@@ -54,18 +54,18 @@ docker run -d \
 FastCache provides a flexible async API using `CompletableFuture`.
 
 ```java
-FastCacheAsyncClient client = new FastCacheAsyncClient("127.0.0.1", 50000, 100);
-
+FastCacheAsyncSimpleClient client = new FastCacheAsyncSimpleClient("127.0.0.1", 50000, 100); // for single node FastCache 
+FastCacheAsyncSmartClient client = new FastCacheAsyncSmartClient("127.0.0.1", 60000, 100); // for cluster FastCache
 // 1. Simple Put/Get
-client.createKeyAsync("user:123", myBytes).get();
+client.createKey("user:123", myBytes).get();
 byte[] data = client.getValueAsync("user:123").get();
 
 // 2. Using Locking (Solo Mode)
-client.lockObjectAsync("resource:A", LockType.GLOBAL, 100, 30).get();
+client.lockObject("resource:A", LockType.GLOBAL, 100, 30).get();
 // Other client IDs will now receive PERMISSION_DENIED for "resource:A"
 
 // 3. Collection Operations
-client.addElementToTailAsync("my_queue", List.of(item1, item2)).get();
+client.addElementToTail("my_queue", List.of(item1, item2)).get();
 ```
 
 ---
@@ -120,17 +120,30 @@ I have expanded the **README** with a high-impact **Benchmarks** table and a pro
 
 ## 📊 Benchmarks
 
-*Tested on: Intel i9-13900K (24 Cores/32 Threads), 64GB DDR5, Ubuntu 24.04, 10Gbps Loopback.*
+*Tested on: Intel i9-11900K (16 Cores), 128GB DDR4, Ubuntu 24.04, 10Gbps Loopback.*
+FastCache config:  8 cache engine threads 4 replication threads. 3 nodes in cluster.
+Test: 
+1. Create 32 MLN records using 32 threads (1 MLN of records for each thread).
+2. Read 32 MLN records using 32 threads (1 MLN of records for each thread).
+3. Update 32 MLN records using 32 threads (1 MLN of records for each thread).
+4. Remove 32 MLN records using 32 threads (1 MLN of records for each thread).
 
-| Metric | Redis (v7.2) | **FastCache** | Improvement |
-| :--- | :--- | :--- | :--- |
-| **Simple GET (Single Client)** | ~120k OPS | **~450k OPS** | 3.7x |
-| **Simple GET (32 Clients)** | ~1.2M OPS* | **~3.2M OPS** | 2.6x |
-| **P99 Latency (GET)** | ~450μs | **~12μs** | 37x |
-| **List Push (1k items)** | ~15k OPS | **~85k OPS** | 5.6x |
-| **Memory Allocation** | Standard Malloc | **HugePage MMAP/Malloc** | Lower TLB Misses |
+| Metric                              | **FastCache Single instance** | **FastCache 3 Nodes cluster** |
+|:------------------------------------|:------------------------------|:------------------------------|   
+| **Simple GET (32 Clients)**         | ~35K OPS*                     | ~100K OPS                     |
+| **Simple CREATE (32 Clients)**      | ~25K OPS*                     | ~83K OPS                      |
+| **MEAN Latency (GET)**              | ~4us                          | ~4us                          |
+| **MAX Latency (GET)**               | ~1ms                          | ~1ms                          |
+| **MEAN Latency (CREATE)**           | ~99us                         | ~99us                         |
+| **MAX Latency (CREATE)**            | ~4ms                          | ~4ms                          |
+| **MEAN Latency (UPDATE)**           | ~4us                          | ~4us                          |
+| **MAX Latency (UPDATE)**            | ~4ms                          | ~4ms                          |
+| **MEAN Latency (REMOVE)**           | ~5us                          | ~5us                          |
+| **MAX Latency (REMOVE)**            | ~6ms                          | ~6ms                          |
+| **Cluster Replication Delay (MAX)** | N/A                           | 1-120uS                       |
+| **Memory Allocation**               | **HugePage MMAP/Malloc**      |
 
-*\*Redis performance with io-threads enabled. FastCache performance scales linearly with i9 core count due to sharded partitioning.*
+*\*FastCache performance scales linearly with i9 core count due to sharded partitioning.*
 
 ---
 
@@ -141,6 +154,64 @@ To achieve the numbers above, FastCache implements several "bare-metal" optimiza
 1.  **Lock Striping**: The `partitioned_hash_map` uses 32 independent shards. This ensures that while Thread 1 is writing to Shard A, Thread 2 can read from Shard B without any mutex contention.
 2.  **Zero-Copy gRPC**: Using `directExecutor()` and protobuf `bytes` fields to minimize memory movement.
 3.  **Kernel Bypass (HugePages)**: By using 2MB pages instead of 4KB, the CPU's **Translation Lookaside Buffer (TLB)** handles 512x more memory per entry, virtually eliminating page table walk overhead.
+
+---
+
+## 🛠️ Cluster setup and run FastCache
+1. Create config file for cluster. 
+Sample of config for 3 nodes cluster run on localhost:
+```text
+---
+cluster:
+- target_ip: 127.0.0.1
+  target_sport: 60000
+  target_eport: 60001
+  coordinator_ip: 127.0.0.1
+  coordinator_port: 61000
+  replicator_port: 62000
+- target_ip: 127.0.0.1
+  target_sport: 50000
+  target_eport: 50001
+  coordinator_ip: 127.0.0.1
+  coordinator_port: 51000
+  replicator_port:  52000
+- target_ip: 127.0.0.1
+  target_sport: 20000
+  target_eport: 20001
+  coordinator_ip: 127.0.0.1
+  coordinator_port: 21000
+  replicator_port:  22000
+cache_server_ip: 127.0.0.1
+cache_server_sport: 50000
+coordinator_ip: 127.0.0.1
+coordinator_port: 51000
+partitions: 1024
+num_threads: 8
+hello_delay: 30
+force_start_delay: 2000
+heartbit: 15
+replica:
+  port: 52000
+  ip: 127.0.0.1
+  num_rep_threads: 4
+```
+
+Configuration contain information about all cluster elements.
+
+| Element                        | Value           | Comment                                                               |
+|:-------------------------------|:----------------|:----------------------------------------------------------------------|
+|cache_server_ip| 127.0.0.1| IP adddess which used to access data                                  |
+|cache_server_sport| 50000| Port which used to access data                                        |
+|coordinator_ip| 127.0.0.1| IP adddess of coordinator process                                     |
+|coordinator_port| 51000| Port of coordinator process                                           |
+|partitions| 1024| Number of partitions in fastcache                                     |
+|num_threads| 8| Number of threads used for FastCache server                           |
+|hello_delay| 30| Initial delay for start to make all nodes up                          |
+|force_start_delay| 2000| Force start delay. Used if nodes started partially                    |
+|heartbit| 15| Ping interval                                                         |
+|replica.port| 52000| Replication server port                                               |
+|replica.ip| 127.0.0.1| Replication server IP                                                 |
+|replica.num_rep_threads| 4| Number of threads used by Replication server. Should be about 50% of num_threads |
 
 ---
 
@@ -180,3 +251,4 @@ FastCache is licensed under Dual-Licensing: Software is available under an open-
 * [x] Atomic Statistics with Throughput tracking.
 * [x] Multi-stage Docker deployment.
 
+]()

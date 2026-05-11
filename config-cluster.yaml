@@ -1,0 +1,33 @@
+---
+cluster:
+  - target_ip: 127.0.0.1
+    target_sport: 60000
+    target_eport: 60001
+    coordinator_ip: 127.0.0.1
+    coordinator_port: 61000
+    replicator_port: 62000
+  - target_ip: 127.0.0.1
+    target_sport: 50000
+    target_eport: 50001
+    coordinator_ip: 127.0.0.1
+    coordinator_port: 51000
+    replicator_port:  52000
+  - target_ip: 127.0.0.1
+    target_sport: 20000
+    target_eport: 20001
+    coordinator_ip: 127.0.0.1
+    coordinator_port: 21000
+    replicator_port:  22000
+cache_server_ip: 127.0.0.1
+cache_server_sport: 50000
+coordinator_ip: 127.0.0.1
+coordinator_port: 51000
+partitions: 1024
+num_threads: 8
+hello_delay: 30
+force_start_delay: 2000
+heartbit: 15
+replica:
+  port: 52000
+  ip: 127.0.0.1
+  num_rep_threads: 4
