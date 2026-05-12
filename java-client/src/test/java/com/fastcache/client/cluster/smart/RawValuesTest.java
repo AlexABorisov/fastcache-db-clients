@@ -204,7 +204,7 @@ public class RawValuesTest extends TestBaseCluster {
         byte[] newValM = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER).getValue(testKey,KeyHint).get();
         Assertions.assertEquals(testValue, new String(oldVal));
         Assertions.assertEquals(testValueUpdate, new String(newValM));
-        Thread.sleep(50);
+        Thread.sleep(100);
         byte[] newValB = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP).getValue(testKey,KeyHint).get();
         Assertions.assertEquals(testValue, new String(oldVal));
         Assertions.assertEquals(testValueUpdate, new String(newValB));

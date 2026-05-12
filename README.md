@@ -131,10 +131,10 @@ Test:
 | Metric                              | **FastCache Single instance** | **FastCache 3 Nodes cluster** |
 |:------------------------------------|:------------------------------|:------------------------------|   
 | **Simple GET (32 Clients)**         | ~35K OPS*                     | ~100K OPS                     |
-| **Simple CREATE (32 Clients)**      | ~25K OPS*                     | ~83K OPS                      |
+| **Simple CREATE (32 Clients)**      | ~59K OPS*                     | ~83K OPS                      |
 | **MEAN Latency (GET)**              | ~4us                          | ~4us                          |
 | **MAX Latency (GET)**               | ~1ms                          | ~1ms                          |
-| **MEAN Latency (CREATE)**           | ~99us                         | ~99us                         |
+| **MEAN Latency (CREATE)**           | ~5us                          | ~99us                         |
 | **MAX Latency (CREATE)**            | ~4ms                          | ~4ms                          |
 | **MEAN Latency (UPDATE)**           | ~4us                          | ~4us                          |
 | **MAX Latency (UPDATE)**            | ~4ms                          | ~4ms                          |

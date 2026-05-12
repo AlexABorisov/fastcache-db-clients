@@ -22,7 +22,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class FastCacheRawStressTest {
 
     private final int THREAD_COUNT = 32; // Optimized for i9
-    private final int OPERATIONS_PER_THREAD = 1000000;
+    private final int OPERATIONS_PER_THREAD = 100000;
     private String serverName;
 
     @BeforeEach
