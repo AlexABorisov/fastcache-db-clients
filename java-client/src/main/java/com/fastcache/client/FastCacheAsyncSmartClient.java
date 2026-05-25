@@ -19,6 +19,7 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jspecify.annotations.NonNull;
 
+import java.lang.invoke.VarHandle;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
@@ -67,6 +68,7 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
     ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2);
     CountDownLatch readyLatch = new CountDownLatch(1);
     AtomicBoolean readyFlag = new AtomicBoolean(false);
+    AtomicBoolean isUpdating = new AtomicBoolean(false);
     AtomicInteger randomShard = new AtomicInteger(0);
     static Logger log = LogManager.getLogger(FastCacheAsyncSmartClient.class);
 
@@ -100,6 +102,10 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
 
 
     private void init() {
+        if (!isUpdating.compareAndSet(false, true)) {
+            log.debug("[INIT] Client already updating");
+            return;
+        }
         CompletableFuture<List<PeerRouting>> future = new CompletableFuture<>();
         RoutingObserver responseObserver = new RoutingObserver(future);
 
@@ -483,7 +489,7 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
                 }
                 if (isUnavailable(ex)) {
                     log.atDebug().log("Endpoint not available {}",master.getTarget(),ex);
-                    scheduledExecutorService.execute(() -> removeEndpoint(master));
+                    scheduledExecutorService.execute(this::init);
                     if (backup != null) {
                         return action.apply(backup);
                     }
@@ -511,21 +517,12 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
             }
             if (isUnavailable(ex)) {
                 log.atDebug().log("Endpoint not available {}",endpoint.getTarget(),ex);
-                scheduledExecutorService.execute(() -> removeEndpoint(endpoint));
+                scheduledExecutorService.execute(this::init);
             }
             return CompletableFuture.failedFuture(ex);
         };
     }
 
-    private void removeEndpoint(FastCacheClientInterface master) {
-        String target = master.getTarget();
-        FastCacheClientInterface removed = routing_info.get().routingTableTarget.remove(target);
-        if (removed != null) {
-            removed.shutdown();
-            routing_info.get().routingTable.entrySet().removeIf(item -> item.getValue().getTarget().equals(removed.getTarget()));
-        }
-
-    }
 
     public FastCacheAsyncSmartClient setMode(Mode mode) {
         this.mode = mode;
