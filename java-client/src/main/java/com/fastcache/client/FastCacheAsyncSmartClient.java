@@ -44,8 +44,9 @@ import static com.fastcache.grpc.coordinator.NodeRole.MASTER;
 public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
     private final ManagedChannel channel;
 
-    record RoutingInfo(int max_shards, ConcurrentHashMap<Pair<NodeRole, Integer>, FastCacheClientInterface> routingTable,
-                               ConcurrentHashMap<String, FastCacheClientInterface> routingTableTarget) {
+    record RoutingInfo(int max_shards,
+                       ConcurrentHashMap<Pair<NodeRole, Integer>, FastCacheClientInterface> routingTable,
+                       ConcurrentHashMap<String, FastCacheClientInterface> routingTableTarget) {
         @Override
         public String toString() {
             return "RoutingInfo{"
@@ -64,7 +65,9 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
     private final int defaultClientId;
     private final Duration defaultTimeout;
     private final Duration readyTimeout = Duration.ofSeconds(60);
-    final AtomicReference<RoutingInfo> routing_info = new AtomicReference<>(new RoutingInfo(1024,new ConcurrentHashMap<>(),new ConcurrentHashMap<>()));
+    final AtomicReference<RoutingInfo> routing_info = new AtomicReference<>(new RoutingInfo(1024,
+                                                                                            new ConcurrentHashMap<>(),
+                                                                                            new ConcurrentHashMap<>()));
     ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(2);
     CountDownLatch readyLatch = new CountDownLatch(1);
     AtomicBoolean readyFlag = new AtomicBoolean(false);
@@ -85,21 +88,18 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
         this.defaultTimeout = timeout;
         this.mode = Mode.MASTER_THAN_BACKUP;
         scheduledExecutorService.scheduleAtFixedRate(this::init, 0, 30, TimeUnit.SECONDS);
-        log.atDebug().log("Client created coordinator {}:{} timeout {}",coordinatorHost,coordinatorPort,timeout);
+        log.atDebug().log("Client created coordinator {}:{} timeout {}", coordinatorHost, coordinatorPort, timeout);
     }
 
-    public FastCacheAsyncSmartClient(ManagedChannel ch,
-                                     int defaultClientId,
-                                     Duration timeout) {
-        this.channel=ch;
+    public FastCacheAsyncSmartClient(ManagedChannel ch, int defaultClientId, Duration timeout) {
+        this.channel = ch;
         this.asyncStub = CoordinatorServiceGrpc.newStub(channel);
         this.defaultClientId = defaultClientId;
         this.defaultTimeout = timeout;
         this.mode = Mode.MASTER_THAN_BACKUP;
         scheduledExecutorService.scheduleAtFixedRate(this::init, 0, 30, TimeUnit.SECONDS);
-        log.atDebug().log("Client created coordinator {} timeout {}",ch,timeout);
+        log.atDebug().log("Client created coordinator {} timeout {}", ch, timeout);
     }
-
 
     private void init() {
         if (!isUpdating.compareAndSet(false, true)) {
@@ -110,59 +110,63 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
         RoutingObserver responseObserver = new RoutingObserver(future);
 
         asyncStub.provideGlobalRoutingInfo(Void.newBuilder().build(), responseObserver);
-        future.orTimeout(defaultTimeout.toMillis(), TimeUnit.MILLISECONDS)
-                .thenAccept(peerRoutingList -> {
-                    int maxShards = responseObserver.getMaxShards();
-                    RoutingInfo currentInfo = routing_info.get();
+        future.orTimeout(defaultTimeout.toMillis(), TimeUnit.MILLISECONDS).thenAccept(peerRoutingList -> {
+            try {
+                int maxShards = responseObserver.getMaxShards();
+                RoutingInfo currentInfo = routing_info.get();
 
-                    ConcurrentHashMap<String, FastCacheClientInterface> newRoutingTableTarget = new ConcurrentHashMap<>(currentInfo.routingTableTarget);
-                    ConcurrentHashMap<Pair<NodeRole, Integer>, FastCacheClientInterface> newRoutingTable = new ConcurrentHashMap<>();
-                    Set<String> newTargets = peerRoutingList.stream().map(PeerRouting::getTarget).collect(Collectors.toSet());
-                    Set<String> oltTargets = currentInfo.routingTableTarget.keySet().stream().collect(Collectors.toSet());
-                    //что добавилось
-                    HashSet<String> toAdd = new HashSet<>(newTargets);
-                    toAdd.removeAll(oltTargets);
-                    //что удалилось
-                    HashSet<String> toRemove = new HashSet<>(oltTargets);
-                    toRemove.removeAll(newTargets);
-                    //Добавим
-                    toAdd.forEach(item->{
-                        newRoutingTableTarget.put(item,newFastCacheClient(item));
-                    });
-                    toRemove.forEach(keyToRemove ->{
-                        FastCacheClientInterface remove = newRoutingTableTarget.remove(keyToRemove);
-                        remove.shutdown();
-                    });
-                    peerRoutingList.forEach(item ->{
-                        item.getPartitionIdsList().forEach(id->{
-                            newRoutingTable.put(Pair.of(item.getRole(),id), newRoutingTableTarget.get(item.getTarget()));
-                        });
-                    });
-                    RoutingInfo newValue = new RoutingInfo(maxShards, newRoutingTable, newRoutingTableTarget);
-                    routing_info.set(newValue);
-                    log.atDebug().log("routing_table: {}", newValue);
-
-                    // 4. Signal readiness
-                    if (readyFlag.compareAndSet(false, true)) {
-                        log.atDebug().log("Client initialized");
-                        readyLatch.countDown();
-                    }
-                })
-                .exceptionally(ex -> {
-                    log.atWarn().log("Exception during obtaining routing information asynchronously", ex);
-                    return null;
+                ConcurrentHashMap<String, FastCacheClientInterface> newRoutingTableTarget = new ConcurrentHashMap<>(
+                        currentInfo.routingTableTarget);
+                ConcurrentHashMap<Pair<NodeRole, Integer>, FastCacheClientInterface> newRoutingTable
+                        = new ConcurrentHashMap<>();
+                Set<String> newTargets = peerRoutingList.stream()
+                        .map(PeerRouting::getTarget)
+                        .collect(Collectors.toSet());
+                Set<String> oltTargets = currentInfo.routingTableTarget.keySet().stream().collect(Collectors.toSet());
+                //что добавилось
+                HashSet<String> toAdd = new HashSet<>(newTargets);
+                toAdd.removeAll(oltTargets);
+                //что удалилось
+                HashSet<String> toRemove = new HashSet<>(oltTargets);
+                toRemove.removeAll(newTargets);
+                //Добавим
+                toAdd.forEach(item -> {
+                    newRoutingTableTarget.put(item, newFastCacheClient(item));
                 });
+                toRemove.forEach(keyToRemove -> {
+                    FastCacheClientInterface remove = newRoutingTableTarget.remove(keyToRemove);
+                    remove.shutdown();
+                });
+                peerRoutingList.forEach(item -> {
+                    item.getPartitionIdsList().forEach(id -> {
+                        newRoutingTable.put(Pair.of(item.getRole(), id), newRoutingTableTarget.get(item.getTarget()));
+                    });
+                });
+                RoutingInfo newValue = new RoutingInfo(maxShards, newRoutingTable, newRoutingTableTarget);
+                routing_info.set(newValue);
+                log.atDebug().log("routing_table: {}", newValue);
+
+                // 4. Signal readiness
+                if (readyFlag.compareAndSet(false, true)) {
+                    log.atDebug().log("Client initialized");
+                    readyLatch.countDown();
+                }
+            } finally {
+                isUpdating.set(false);
+            }
+        }).exceptionally(ex -> {
+            isUpdating.set(false);
+            log.atWarn().log("Exception during obtaining routing information asynchronously", ex);
+            return null;
+        });
     }
 
     // Helper method to keep code clean
     private FastCacheClientInterface newFastCacheClient(String target) {
-        return new FastCacheAsyncSimpleClient(
-                ManagedChannelBuilder.forTarget(target)
-                        .usePlaintext()
-                        .directExecutor()
-                        .build(),
-                defaultClientId,
-                defaultTimeout);
+        return new FastCacheAsyncSimpleClient(ManagedChannelBuilder.forTarget(target)
+                                                      .usePlaintext()
+                                                      .directExecutor()
+                                                      .build(), defaultClientId, defaultTimeout);
     }
 
     public boolean getReadyFlag() {
@@ -203,11 +207,14 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
         return execute(keyHint, client -> client.getAndDeleteValue(key, keyHint, clientId, timeout));
     }
 
-
     @Override
-    public CompletableFuture<KeyHint> createKeyValue(byte[] key,KeyHint hint, byte[] value, int clientId, Duration timeout) {
+    public CompletableFuture<KeyHint> createKeyValue(byte[] key,
+                                                     KeyHint hint,
+                                                     byte[] value,
+                                                     int clientId,
+                                                     Duration timeout) {
         KeyHint keyHint = getKeyHint(key, hint);
-        return execute(keyHint, client -> client.createKeyValue(key,keyHint, value, clientId, timeout));
+        return execute(keyHint, client -> client.createKeyValue(key, keyHint, value, clientId, timeout));
     }
 
     @Override
@@ -329,7 +336,8 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
                                                                 int clientId,
                                                                 Duration timeout) {
         KeyHint keyHint = getKeyHint(key, hint);
-        return execute(keyHint, client -> client.streamElementInRange(key, keyHint, isArray, start, end, clientId, timeout));
+        return execute(keyHint,
+                       client -> client.streamElementInRange(key, keyHint, isArray, start, end, clientId, timeout));
     }
 
     @Override
@@ -410,10 +418,11 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
         return execute(keyHint, client -> client.getTail(key, keyHint, clientId, timeout));
     }
 
-    private FastCacheClientInterface getRoute(RoutingInfo info,int shard, NodeRole role) {
-        return info.routingTable.get(Pair.of(role,shard));
+    private FastCacheClientInterface getRoute(RoutingInfo info, int shard, NodeRole role) {
+        return info.routingTable.get(Pair.of(role, shard));
     }
-    private FastCacheClientInterface getRoute(RoutingInfo info,String target) {
+
+    private FastCacheClientInterface getRoute(RoutingInfo info, String target) {
         return info.routingTableTarget.get(target);
     }
 
@@ -428,21 +437,26 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
         Throwable cause = (ex instanceof CompletionException)
                           ? ex.getCause()
                           : ex;
-        return cause instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED;
+        return cause instanceof StatusRuntimeException sre
+               && sre.getStatus().getCode() == Status.Code.DEADLINE_EXCEEDED;
     }
 
     private boolean isReroute(Throwable ex) {
         Throwable cause = (ex instanceof CompletionException)
                           ? ex.getCause()
                           : ex;
-        return cause instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.FAILED_PRECONDITION;
+        return cause instanceof StatusRuntimeException sre
+               && sre.getStatus().getCode() == Status.Code.FAILED_PRECONDITION;
     }
+
     private String getRerouteTarget(Throwable ex) {
         Throwable cause = (ex instanceof CompletionException)
                           ? ex.getCause()
                           : ex;
-        if (cause instanceof StatusRuntimeException sre && sre.getStatus().getCode() == Status.Code.FAILED_PRECONDITION && sre.getTrailers() != null){
-            return sre.getTrailers().get(Metadata.Key.of("x-fastcache-route",Metadata.ASCII_STRING_MARSHALLER));
+        if (cause instanceof StatusRuntimeException sre
+            && sre.getStatus().getCode() == Status.Code.FAILED_PRECONDITION
+            && sre.getTrailers() != null) {
+            return sre.getTrailers().get(Metadata.Key.of("x-fastcache-route", Metadata.ASCII_STRING_MARSHALLER));
         }
         return null;
     }
@@ -459,44 +473,53 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
             }
         }
 
-
         final int shard;
         RoutingInfo routingInfo = routing_info.get();
         if (hint == null) {
             shard = randomShard.incrementAndGet() % routingInfo.max_shards;
         } else {
-            shard = (int)(Math.abs(Integer.toUnsignedLong(hint.getWeekHash()) % routingInfo.max_shards));
+            shard = (int) (Math.abs(Integer.toUnsignedLong(hint.getWeekHash()) % routingInfo.max_shards));
         }
         Mode effectiveMode = mode;
-        final FastCacheClientInterface master = getRoute(routingInfo,shard, MASTER);
-        final FastCacheClientInterface backup = getRoute(routingInfo,shard, BACKUP);
-        if (master == null){
-            log.atDebug().log("Master not available routing to {}",backup.getTarget());
+        final FastCacheClientInterface master = getRoute(routingInfo, shard, MASTER);
+        final FastCacheClientInterface backup = getRoute(routingInfo, shard, BACKUP);
+        if (master == null && backup != null) {
+            return CompletableFuture.<T>failedFuture(new RuntimeException(
+                    "Master and backups are both unavailable or all nodes are marked as unhealthy"));
+        }
+        if (master == null) {
+            log.atDebug().log("Master not available routing to {}", backup.getTarget());
             effectiveMode = Mode.BACKUP;
         }
-        log.atDebug().log("Selected shard: {} master: {} backup: {}",shard,master.getTarget(),backup.getTarget());
+
+        log.atDebug().log("Selected shard: {} master: {} backup: {}", shard, master.getTarget(), backup.getTarget());
         return switch (effectiveMode) {
-            case MASTER -> action.apply(master).handle(executeOnClient(shard,routingInfo,action, master)).thenCompose(Function.identity());
-            case BACKUP -> action.apply(backup).handle(executeOnClient(shard,routingInfo,action, backup)).thenCompose(Function.identity());
+            case MASTER -> action.apply(master)
+                    .handle(executeOnClient(shard, routingInfo, action, master))
+                    .thenCompose(Function.identity());
+            case BACKUP -> action.apply(backup)
+                    .handle(executeOnClient(shard, routingInfo, action, backup))
+                    .thenCompose(Function.identity());
             case MASTER_THAN_BACKUP -> action.apply(master).handle((result, ex) -> {
                 if (ex == null) {
                     return CompletableFuture.completedFuture(result);
                 }
                 if (isReroute(ex)) {
                     String route = getRerouteTarget(ex);
-                    log.atDebug().log("Incorrect routing table. Rerouting to {}",route,ex);
-                    return action.apply(getRoute(routingInfo,route));
+                    log.atDebug().log("Incorrect routing table. Rerouting to {}", route, ex);
+                    return action.apply(getRoute(routingInfo, route));
                 }
                 if (isUnavailable(ex)) {
-                    log.atDebug().log("Endpoint not available {}",master.getTarget(),ex);
+                    log.atDebug().log("Endpoint not available {}", master.getTarget(), ex);
                     scheduledExecutorService.execute(this::init);
                     if (backup != null) {
                         return action.apply(backup);
                     }
-                    return CompletableFuture.<T>failedFuture(new RuntimeException("Master unavailable and no backup configured"));
+                    return CompletableFuture.<T>failedFuture(new RuntimeException(
+                            "Master unavailable and no backup configured"));
                 }
                 if (isTimeout(ex)) {
-                    log.atDebug().log("Timeout on endpoint {}",master.getTarget(),ex);
+                    log.atDebug().log("Timeout on endpoint {}", master.getTarget(), ex);
                     CompletableFuture.<T>failedFuture(ex);
                 }
                 return CompletableFuture.<T>failedFuture(ex);
@@ -504,25 +527,26 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
         };
     }
 
-    private <T> @NonNull BiFunction<T, Throwable, CompletableFuture<T>> executeOnClient(int shard,RoutingInfo routingInfo,Function<FastCacheClientInterface, CompletableFuture<T>> action,
-                                                                                                                 FastCacheClientInterface endpoint) {
+    private <T> @NonNull BiFunction<T, Throwable, CompletableFuture<T>> executeOnClient(int shard,
+                                                                                        RoutingInfo routingInfo,
+                                                                                        Function<FastCacheClientInterface, CompletableFuture<T>> action,
+                                                                                        FastCacheClientInterface endpoint) {
         return (result, ex) -> {
             if (ex == null) {
                 return CompletableFuture.completedFuture(result);
             }
             if (isReroute(ex)) {
                 String route = getRerouteTarget(ex);
-                log.atDebug().log("Incorrect routing table. Rerouting to {}",route,ex);
-                return action.apply(getRoute(routingInfo,route));
+                log.atDebug().log("Incorrect routing table. Rerouting to {}", route, ex);
+                return action.apply(getRoute(routingInfo, route));
             }
             if (isUnavailable(ex)) {
-                log.atDebug().log("Endpoint not available {}",endpoint.getTarget(),ex);
+                log.atDebug().log("Endpoint not available {}", endpoint.getTarget(), ex);
                 scheduledExecutorService.execute(this::init);
             }
             return CompletableFuture.failedFuture(ex);
         };
     }
-
 
     public FastCacheAsyncSmartClient setMode(Mode mode) {
         this.mode = mode;
