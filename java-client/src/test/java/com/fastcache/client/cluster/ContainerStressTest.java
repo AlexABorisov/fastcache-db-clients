@@ -2,7 +2,7 @@ package com.fastcache.client.cluster;
 
 import com.fastcache.TestBase;
 import com.fastcache.client.FastCacheAsyncSimpleClient;
-import com.fastcache.client.intercece.FastCacheClientInterface;
+import com.fastcache.client.intf.FastCacheClientInterface;
 import com.fastcache.grpc.LockType;
 import io.grpc.inprocess.InProcessChannelBuilder;
 import io.grpc.inprocess.InProcessServerBuilder;

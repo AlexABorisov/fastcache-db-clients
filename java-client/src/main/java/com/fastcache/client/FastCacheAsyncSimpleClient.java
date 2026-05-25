@@ -1,6 +1,6 @@
 package com.fastcache.client;
 
-import com.fastcache.client.intercece.FastCacheClientInterface;
+import com.fastcache.client.intf.FastCacheClientInterface;
 import com.fastcache.grpc.AddToRequest;
 import com.fastcache.grpc.BoolResponse;
 import com.fastcache.grpc.CreateListRequest;
@@ -30,6 +30,7 @@ import io.grpc.ManagedChannelBuilder;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
@@ -48,6 +49,10 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
         target = host+":"+port;
     }
 
+    @Override
+    public String toString() {
+        return "FastCacheAsyncSimpleClient{" + "target='" + target + '\'' + '}';
+    }
 
     public FastCacheAsyncSimpleClient(String host, int port, int clientId) {
         this(host, port, clientId, Duration.ofSeconds(1));
@@ -481,11 +486,10 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
                                                               int clientId,
                                                               Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        KeyPositionRequest request = KeyPositionRequest.newBuilder()
-                .setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId))
-                .setPos(pos)
-                .build();
-        getStub(timeout).removeElementAtPosition(request, new CompletableFutureObserver<>(future, BoolResponse::getValue));
+        KeyPositionRequest.Builder builder = KeyPositionRequest.newBuilder()
+                .setKey(KeyUtils.createKey(key, getKeyHint(key, hint), clientId))
+                .setPos(pos);
+        getStub(timeout).removeElementAtPosition(builder.build(), new CompletableFutureObserver<>(future, BoolResponse::getValue));
         return future;
     }
 
@@ -527,5 +531,19 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
             return asyncStub.withDeadlineAfter(timeout);
         }
         return asyncStub;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
+        FastCacheAsyncSimpleClient that = (FastCacheAsyncSimpleClient) o;
+        return Objects.equals(target, that.target);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(target);
     }
 }

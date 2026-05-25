@@ -46,7 +46,7 @@ public class AdvancedCollectionsTest extends TestBase {
         client.removeTail(vecKey).get();
 
         // removeElementAtPositionAsync at 0 -> [1]
-        client.removeElementAtPosition(vecKey, 0).get();
+        client.removeElementAtPosition(vecKey, 0,0).get();
 
         byte[] remaining = client.getElementAtPosition(vecKey, 0).get();
         Assertions.assertEquals("1", new String(remaining));
