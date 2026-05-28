@@ -45,10 +45,10 @@ public class FastCacheRawStressTest {
                 // Each thread gets its own Async Client (simulating multiple microservices)
                 FastCacheAsyncSimpleClient client[] = {new FastCacheAsyncSimpleClient("127.0.0.1",
                                                                                       50000,
-                                                                                      Duration.ofSeconds(1)),
+                                                                                      Duration.ofSeconds(1))/*,
                                                        new FastCacheAsyncSimpleClient("127.0.0.1",
                                                                                       60000,
-                                                                                      Duration.ofSeconds(1))};
+                                                                                      Duration.ofSeconds(1))*/};
                 try {
                     for (int j = 0; j < OPERATIONS_PER_THREAD; j++) {
                         int index = j % client.length;

@@ -114,7 +114,7 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
                 .setKey(hint == null
                         ? KeyUtils.createKey(key, clientId)
                         : KeyUtils.createKey(key, hint, clientId))
-                .setTtl(ttl)
+                .setTtl(System.currentTimeMillis() + ttl)
                 .build();
         getStub(timeout).setTtl(request, new CompletableFutureObserver<>(future, BoolResponse::getValue));
         return future;
@@ -138,7 +138,9 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
                         ? KeyUtils.createKey(key, clientId)
                         : KeyUtils.createKey(key, hint, clientId))
                 .build();
-        getStub(timeout).getTtl(ttlRequest, new CompletableFutureObserver<>(future, TtlResponse::getTtl));
+        getStub(timeout).getTtl(ttlRequest, new CompletableFutureObserver<>(future, item -> {
+            return item.hasTtl() ? item.getTtl() - System.currentTimeMillis() : -1L;
+        }));
         return future;
     }
 

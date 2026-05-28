@@ -483,7 +483,7 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
         Mode effectiveMode = mode;
         final FastCacheClientInterface master = getRoute(routingInfo, shard, MASTER);
         final FastCacheClientInterface backup = getRoute(routingInfo, shard, BACKUP);
-        if (master == null && backup != null) {
+        if (master == null && backup == null) {
             return CompletableFuture.<T>failedFuture(new RuntimeException(
                     "Master and backups are both unavailable or all nodes are marked as unhealthy"));
         }

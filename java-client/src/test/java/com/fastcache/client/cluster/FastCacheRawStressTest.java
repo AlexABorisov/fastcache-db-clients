@@ -260,7 +260,7 @@ public class FastCacheRawStressTest {
         opsPerSec = (double) (THREAD_COUNT * OPERATIONS_PER_THREAD) / (updateDuration / 1000.0);
         executor.shutdown();
 
-        System.out.println("--- Stress Test Update Results ---");
+        System.out.println("--- Stress Test delete Results ---");
         System.out.println("Total Operations: " + (THREAD_COUNT * OPERATIONS_PER_THREAD));
         System.out.println("Successes: " + deleteSuccessCount.get());
         System.out.println("Errors: " + deleteErrorCount.get());

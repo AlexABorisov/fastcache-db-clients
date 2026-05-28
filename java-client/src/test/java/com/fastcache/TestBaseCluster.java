@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Base class for in-memory gRPC tests.
@@ -15,9 +16,27 @@ import java.util.UUID;
 public abstract class TestBaseCluster {
 
     protected FastCacheAsyncSmartClient client;
+    private static final String ALPHA_NUMERIC_POOL = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 
     private static final int KEY_SIZE = 1024;
     private static final int VALUE_SIZE = 2048;
+
+    protected static String createRandomString(int size) {
+        if (size <= 0) {
+            return "";
+        }
+
+        StringBuilder sb = new StringBuilder(size);
+        ThreadLocalRandom random = ThreadLocalRandom.current();
+
+        for (int i = 0; i < size; i++) {
+            int randomIndex = random.nextInt(ALPHA_NUMERIC_POOL.length());
+            char randomChar = ALPHA_NUMERIC_POOL.charAt(randomIndex);
+            sb.append(randomChar);
+        }
+
+        return sb.toString();
+    }
 
     protected byte[] createLargePayload(int size) {
         byte[] bytes = UUID.randomUUID().toString().getBytes();
