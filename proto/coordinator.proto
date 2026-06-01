@@ -8,56 +8,57 @@ package coordinator;
 
 
 message PeerAnnounceRequest {
-    string target = 1;
-    string coordinator_target = 2;
-    string replicator_target = 3;
-    uint64 uptime = 4;
+  string target = 1;
+  string coordinator_target = 2;
+  string replicator_target = 3;
+  uint64 uptime = 4;
+  optional bool relay = 5;
 }
 
 message PeerAnnounceReply {
-    string target = 1;
-    string coordinator_target = 2;
-    string replicator_target = 3;
-    uint64 uptime = 4;
+  string target = 1;
+  string coordinator_target = 2;
+  string replicator_target = 3;
+  uint64 uptime = 4;
 }
 
 message Ping {
-    string target = 1;
-    string coordinator_target = 2;
-    uint64 uptime = 3;
+  string target = 1;
+  string coordinator_target = 2;
+  uint64 uptime = 3;
 }
 
 message Pong {
-    string target = 1;
-    string coordinator_target = 2;
-    uint64 uptime = 3;
+  string target = 1;
+  string coordinator_target = 2;
+  uint64 uptime = 3;
 }
 
 enum NodeRole {
-    UNDEFINED=0;
-    MASTER=1;BACKUP=2;
+  UNDEFINED=0;
+  MASTER=1;BACKUP=2;
 
 }
 
 message PeerRouting {
-    string target = 1;
-    NodeRole role = 2;
-    repeated uint32 partitionIds = 3;
+  string target = 1;
+  NodeRole role = 2;
+  repeated uint32 partitionIds = 3;
 }
 
 message PeerRoutingRequest {
-    string target = 1;    
+  string target = 1;
 }
 
 
 message RoutingInfoData {
-    uint32 max_shards=1;
-    repeated PeerRouting peerRouting = 2;
+  uint32 max_shards=1;
+  repeated PeerRouting peerRouting = 2;
 }
 
 message IAmBackup {
-    string target = 1;
-    repeated uint32 partitionIds = 2;
+  string target = 1;
+  repeated uint32 partitionIds = 2;
 }
 
 message Void{
@@ -65,10 +66,12 @@ message Void{
 }
 
 service CoordinatorService{
-    rpc init(PeerAnnounceRequest) returns (PeerAnnounceReply){}
-    rpc ping(Ping) returns (Pong){}
-    rpc getRoutingInfo(PeerRoutingRequest) returns (stream PeerRouting){}
-    rpc removeRoutingInfo(PeerRoutingRequest) returns (Void){}
-    rpc sendRoutingInfo(RoutingInfoData) returns (Void){}
-    rpc provideGlobalRoutingInfo(Void) returns(stream RoutingInfoData){}
+  //init message sent node to neighbours to coordinator  interface
+  rpc init(PeerAnnounceRequest) returns (PeerAnnounceReply){}
+  rpc ping(Ping) returns (Pong){}
+  rpc getRoutingInfo(PeerRoutingRequest) returns (stream PeerRouting){}
+  rpc removeRoutingInfo(PeerRoutingRequest) returns (Void){}
+  rpc sendRoutingInfo(RoutingInfoData) returns (Void){}
+  rpc readyForDataMigration(PeerAnnounceRequest) returns (Void){}
+  rpc provideGlobalRoutingInfo(Void) returns(stream RoutingInfoData){}
 }
