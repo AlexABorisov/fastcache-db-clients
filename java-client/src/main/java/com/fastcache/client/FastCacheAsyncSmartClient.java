@@ -492,7 +492,14 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
             effectiveMode = Mode.BACKUP;
         }
 
-        log.atDebug().log("Selected shard: {} master: {} backup: {}", shard, master.getTarget(), backup.getTarget());
+        if (backup == null) {
+            log.atDebug().log("BACKUP not available routing to {}", master.getTarget());
+            effectiveMode = Mode.MASTER;
+        }
+
+        if (master!=null) log.atDebug().log("Selected shard: {} master: {} ", shard, master.getTarget());
+        if (backup!=null)  log.atDebug().log("Selected shard: {} backup: {}", shard, backup.getTarget());
+
         return switch (effectiveMode) {
             case MASTER -> action.apply(master)
                     .handle(executeOnClient(shard, routingInfo, action, master))
