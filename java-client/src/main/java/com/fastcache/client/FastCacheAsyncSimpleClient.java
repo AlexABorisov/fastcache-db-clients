@@ -17,10 +17,10 @@ import com.fastcache.grpc.LockResponse;
 import com.fastcache.grpc.LockStatus;
 import com.fastcache.grpc.LockType;
 import com.fastcache.grpc.TtlRequest;
-import com.fastcache.grpc.TtlResponse;
 import com.fastcache.grpc.UnLockRequest;
 import com.fastcache.grpc.UnlockResponse;
 import com.fastcache.grpc.UpdateRequest;
+import com.fastcache.grpc.Value;
 import com.fastcache.utils.CompletableFutureObserver;
 import com.fastcache.utils.CompressionUtils;
 import com.fastcache.utils.DecompressingObserver;
@@ -46,7 +46,7 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
         this.asyncStub = FastCacheGrpcServiceGrpc.newStub(channel);
         this.defaultClientId = defaultClientId;
         this.defaultTimeout = timeout;
-        target = host+":"+port;
+        target = host + ":" + port;
     }
 
     @Override
@@ -67,7 +67,7 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
     }
 
     public FastCacheAsyncSimpleClient(ManagedChannel channel) {
-        this(channel,0 );
+        this(channel, 0);
     }
 
     public FastCacheAsyncSimpleClient(ManagedChannel channel, int clientId) {
@@ -138,9 +138,7 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
                         ? KeyUtils.createKey(key, clientId)
                         : KeyUtils.createKey(key, hint, clientId))
                 .build();
-        getStub(timeout).getTtl(ttlRequest, new CompletableFutureObserver<>(future, item -> {
-            return item.hasTtl() ? item.getTtl() - System.currentTimeMillis() : -1L;
-        }));
+        getStub(timeout).getTtl(ttlRequest, new CompletableFutureObserver<>(future, item -> item.hasTtl() ? item.getTtl() - System.currentTimeMillis() : -1L));
         return future;
     }
 
@@ -157,7 +155,7 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
     public CompletableFuture<byte[]> getAndDeleteValue(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
         GetRequest request = GetRequest.newBuilder()
-                .setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId))
+                .setKey(KeyUtils.createKey(key, getKeyHint(key, hint), clientId))
                 .build();
         getStub(timeout).getAndDeleteValue(request, new DecompressingObserver(future));
         return future;
@@ -173,11 +171,15 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
      * @return CompletableFuture with response
      */
     @Override
-    public CompletableFuture<KeyHint> createKeyValue(byte[] key,KeyHint hint, byte[] value, int clientId, Duration timeout) {
+    public CompletableFuture<KeyHint> createKeyValue(byte[] key,KeyHint hint, byte[] value,Duration ttl, int clientId, Duration timeout) {
         CompletableFuture<KeyHint> future = new CompletableFuture<>();
+        Value.Builder valueBuilder = CompressionUtils.compressIfNeeded(value);
+        if (ttl != null && !ttl.isZero()){
+            valueBuilder.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        }
         CreateRequest req = CreateRequest.newBuilder()
                 .setKey(KeyUtils.createKey(key,getKeyHint(key,hint), clientId))
-                .setValue(CompressionUtils.compressIfNeeded(value))
+                .setValue(valueBuilder)
                 .build();
         getStub(timeout).createKeyValue(req, new CompletableFutureObserver<>(future, KeyHintResponse::getKeyHint));
         return future;
@@ -213,14 +215,19 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
     public CompletableFuture<byte[]> updateKeyValue(byte[] key,
                                                     KeyHint hint,
                                                     byte[] value,
+                                                    Duration ttl,
                                                     int clientId,
                                                     Duration timeout) {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
-        UpdateRequest req = UpdateRequest.newBuilder()
+        Value.Builder builderForValue = CompressionUtils.compressIfNeeded(value);
+        if (ttl != null && !ttl.isZero()){
+            builderForValue.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        }
+        UpdateRequest.Builder req = UpdateRequest.newBuilder()
                 .setKey(buildKey(key, getKeyHint(key,hint), clientId))
-                .setValue(CompressionUtils.compressIfNeeded(value))
-                .build();
-        getStub(timeout).updateValue(req, new DecompressingObserver.Update(future));
+                .setValue(builderForValue);
+
+        getStub(timeout).updateValue(req.build(), new DecompressingObserver.Update(future));
         return future;
     }
 
@@ -235,8 +242,8 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
     @Override
     public CompletableFuture<Boolean> existKey(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<Boolean> future = new CompletableFuture<>();
-        getStub(timeout).existKey(buildGetReq(key, getKeyHint(key,hint), clientId),
-                                                new CompletableFutureObserver<>(future, BoolResponse::getValue));
+        getStub(timeout).existKey(buildGetReq(key, getKeyHint(key, hint), clientId),
+                                  new CompletableFutureObserver<>(future, BoolResponse::getValue));
         return future;
     }
 
@@ -268,12 +275,16 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
     @Override
     public CompletableFuture<KeyHint> createQueue(byte[] key,
                                                   List<byte[]> initialValue,
+                                                  Duration ttl,
                                                   int clientId,
                                                   Duration timeout) {
         CompletableFuture<KeyHint> future = new CompletableFuture<>();
         CreateQueueRequest.Builder builder = CreateQueueRequest.newBuilder().setKey(KeyUtils.createKey(key,getKeyHint(key), clientId));
         if (initialValue != null) {
             initialValue.forEach(elem -> builder.addValue(CompressionUtils.compressIfNeeded(elem)));
+        }
+        if (ttl != null && !ttl.isZero()){
+            builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
         }
         getStub(timeout).createQueue(builder.build(), new CompletableFutureObserver<>(future, KeyHintResponse::getKeyHint));
         return future;
@@ -282,12 +293,16 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
     @Override
     public CompletableFuture<KeyHint> createList(byte[] key,
                                                  List<byte[]> initialValue,
+                                                 Duration ttl,
                                                  int clientId,
                                                  Duration timeout) {
         CompletableFuture<KeyHint> future = new CompletableFuture<>();
         CreateListRequest.Builder builder = CreateListRequest.newBuilder()
                 .setKey(KeyUtils.createKey(key,getKeyHint(key), clientId))
                 .setAsArray(false);
+        if (ttl!=null && !ttl.isZero()){
+            builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        }
         initialValue.forEach(elem -> builder.addValue(CompressionUtils.compressIfNeeded(elem)));
         getStub(timeout).createList(builder.build(), new CompletableFutureObserver<>(future, KeyHintResponse::getKeyHint));
         return future;
@@ -296,16 +311,21 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
     @Override
     public CompletableFuture<KeyHint> createVector(byte[] key,
                                                    List<byte[]> initialValue,
+                                                   Duration ttl,
                                                    int clientId,
                                                    Duration timeout) {
         CompletableFuture<KeyHint> future = new CompletableFuture<>();
         CreateListRequest.Builder builder = CreateListRequest.newBuilder()
                 .setKey(KeyUtils.createKey(key,getKeyHint(key), clientId))
                 .setAsArray(true);
+        if (ttl !=null && !ttl.isZero()){
+            builder.setTtl(System.currentTimeMillis() + ttl.toMillis());
+        }
         initialValue.forEach(elem -> builder.addValue(CompressionUtils.compressIfNeeded(elem)));
         getStub(timeout).createList(builder.build(), new CompletableFutureObserver<>(future, KeyHintResponse::getKeyHint));
         return future;
     }
+
 
     @Override
     public CompletableFuture<byte[]> getAndRemoveFront(byte[] key, KeyHint hint, int clientId, Duration timeout) {
@@ -353,7 +373,7 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
     @Override
     public CompletableFuture<List<byte[]>> streamList(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<List<byte[]>> future = new CompletableFuture<>();
-        getStub(timeout).getList(buildGetReq(key, getKeyHint(key,hint), clientId), new StreamBatchObserver(future));
+        getStub(timeout).getList(buildGetReq(key, getKeyHint(key, hint), clientId), new StreamBatchObserver(future));
         return future;
     }
 
@@ -366,7 +386,7 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
                                                     Duration timeout) {
         CompletableFuture<LockStatus> future = new CompletableFuture<>();
         LockRequest req = LockRequest.newBuilder()
-                .setKey(buildKey(key, getKeyHint(key,hint), clientId))
+                .setKey(buildKey(key, getKeyHint(key, hint), clientId))
                 .setLockType(type)
                 .setClientId(clientId)
                 .setLockDuration((int) duration.toSeconds())
@@ -379,7 +399,7 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
     public CompletableFuture<LockStatus> unlockObject(byte[] key, KeyHint hint, int clientId, Duration timeout) {
         CompletableFuture<LockStatus> future = new CompletableFuture<>();
         UnLockRequest req = UnLockRequest.newBuilder()
-                .setKey(buildKey(key, getKeyHint(key,hint), clientId))
+                .setKey(buildKey(key, getKeyHint(key, hint), clientId))
                 .setClientId(clientId)
                 .build();
         getStub(timeout).unlockObject(req, new CompletableFutureObserver<>(future, UnlockResponse::getResult));
@@ -514,6 +534,14 @@ public class FastCacheAsyncSimpleClient implements FastCacheClientInterface {
         CompletableFuture<byte[]> future = new CompletableFuture<>();
         getStub(timeout).getTail(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId)).build(),
                                                new DecompressingObserver(future));
+        return future;
+    }
+
+    @Override
+    public CompletableFuture<byte[]> getAndRemoveTail(byte[] key, KeyHint hint, int clientId, Duration timeout) {
+        CompletableFuture<byte[]> future = new CompletableFuture<>();
+        getStub(timeout).getAndRemoveTail(GetRequest.newBuilder().setKey(KeyUtils.createKey(key, getKeyHint(key,hint), clientId)).build(),
+                                 new DecompressingObserver(future));
         return future;
     }
 

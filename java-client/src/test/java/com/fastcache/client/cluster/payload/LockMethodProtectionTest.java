@@ -86,7 +86,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // Create on master
         KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.MASTER)
-                .createList(listKey, List.of(createLargePayload(VALUE_SIZE)), ownerId,Duration.of(1, ChronoUnit.SECONDS))
+                .createList(listKey, List.of(createLargePayload(VALUE_SIZE)),Duration.ofMinutes(5), ownerId,Duration.of(1, ChronoUnit.SECONDS))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);
@@ -110,7 +110,7 @@ public class LockMethodProtectionTest extends TestBaseCluster {
 
         // Create on backup
         KeyHint keyHint = client.setMode(FastCacheAsyncSmartClient.Mode.BACKUP)
-                .createList(listKey, List.of(createLargePayload(VALUE_SIZE)), ownerId,Duration.of(1,ChronoUnit.SECONDS))
+                .createList(listKey, List.of(createLargePayload(VALUE_SIZE)), Duration.ofMinutes(5),ownerId,Duration.of(1,ChronoUnit.SECONDS))
                 .get();
         // Allow cache to replicate data inside cluster
         Thread.sleep(150);

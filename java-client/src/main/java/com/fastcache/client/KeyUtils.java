@@ -41,8 +41,7 @@ public class KeyUtils {
     /**
      * Helper to wrap raw bytes into a Protobuf Value object.
      */
-    public static Value createValue(byte[] data) {
-        // We use CompressionUtils here to ensure consistency
+    public static Value.Builder createValue(byte[] data) {
         return CompressionUtils.compressIfNeeded(data);
     }
     private static final long PRIME_0 = 0x9E3779B97F4A7C15L;

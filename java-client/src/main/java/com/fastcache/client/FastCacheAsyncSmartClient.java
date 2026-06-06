@@ -19,7 +19,6 @@ import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jspecify.annotations.NonNull;
 
-import java.lang.invoke.VarHandle;
 import java.time.Duration;
 import java.util.HashSet;
 import java.util.List;
@@ -122,7 +121,7 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
                 Set<String> newTargets = peerRoutingList.stream()
                         .map(PeerRouting::getTarget)
                         .collect(Collectors.toSet());
-                Set<String> oltTargets = currentInfo.routingTableTarget.keySet().stream().collect(Collectors.toSet());
+                Set<String> oltTargets = new HashSet<>(currentInfo.routingTableTarget.keySet());
                 //что добавилось
                 HashSet<String> toAdd = new HashSet<>(newTargets);
                 toAdd.removeAll(oltTargets);
@@ -130,18 +129,12 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
                 HashSet<String> toRemove = new HashSet<>(oltTargets);
                 toRemove.removeAll(newTargets);
                 //Добавим
-                toAdd.forEach(item -> {
-                    newRoutingTableTarget.put(item, newFastCacheClient(item));
-                });
+                toAdd.forEach(item -> newRoutingTableTarget.put(item, newFastCacheClient(item)));
                 toRemove.forEach(keyToRemove -> {
                     FastCacheClientInterface remove = newRoutingTableTarget.remove(keyToRemove);
                     remove.shutdown();
                 });
-                peerRoutingList.forEach(item -> {
-                    item.getPartitionIdsList().forEach(id -> {
-                        newRoutingTable.put(Pair.of(item.getRole(), id), newRoutingTableTarget.get(item.getTarget()));
-                    });
-                });
+                peerRoutingList.forEach(item -> item.getPartitionIdsList().forEach(id -> newRoutingTable.put(Pair.of(item.getRole(), id), newRoutingTableTarget.get(item.getTarget()))));
                 RoutingInfo newValue = new RoutingInfo(maxShards, newRoutingTable, newRoutingTableTarget);
                 routing_info.set(newValue);
                 log.atDebug().log("routing_table: {}", newValue);
@@ -166,7 +159,22 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
         return new FastCacheAsyncSimpleClient(ManagedChannelBuilder.forTarget(target)
                                                       .usePlaintext()
                                                       .directExecutor()
-                                                      .build(), defaultClientId, defaultTimeout);
+                                                      .build(), defaultClientId, defaultTimeout){
+            @Override
+            public Duration getDefaultTtl() {
+                return FastCacheAsyncSmartClient.this.getDefaultTtl();
+            }
+
+            @Override
+            public int getDefaultClientId() {
+                return FastCacheAsyncSmartClient.this.getDefaultClientId();
+            }
+
+            @Override
+            public Duration getDefaultTimeout() {
+                return FastCacheAsyncSmartClient.this.getDefaultTimeout();
+            }
+        };
     }
 
     public boolean getReadyFlag() {
@@ -187,6 +195,8 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
     public Duration getDefaultTimeout() {
         return defaultTimeout;
     }
+
+
 
     @Override
     public CompletableFuture<Boolean> setTtl(byte[] key, KeyHint hint, long ttl, int clientId, Duration timeout) {
@@ -211,10 +221,11 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
     public CompletableFuture<KeyHint> createKeyValue(byte[] key,
                                                      KeyHint hint,
                                                      byte[] value,
+                                                     Duration ttl,
                                                      int clientId,
                                                      Duration timeout) {
         KeyHint keyHint = getKeyHint(key, hint);
-        return execute(keyHint, client -> client.createKeyValue(key, keyHint, value, clientId, timeout));
+        return execute(keyHint, client -> client.createKeyValue(key, keyHint, value,ttl, clientId, timeout));
     }
 
     @Override
@@ -227,10 +238,11 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
     public CompletableFuture<byte[]> updateKeyValue(byte[] key,
                                                     KeyHint hint,
                                                     byte[] value,
+                                                    Duration ttl,
                                                     int clientId,
                                                     Duration timeout) {
         KeyHint keyHint = getKeyHint(key, hint);
-        return execute(keyHint, client -> client.updateKeyValue(key, keyHint, value, clientId, timeout));
+        return execute(keyHint, client -> client.updateKeyValue(key, keyHint, value,ttl, clientId, timeout));
     }
 
     @Override
@@ -248,28 +260,37 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
     @Override
     public CompletableFuture<KeyHint> createQueue(byte[] key,
                                                   List<byte[]> initialValue,
+                                                  Duration ttl,
                                                   int clientId,
                                                   Duration timeout) {
         KeyHint keyHint = getKeyHint(key);
-        return execute(keyHint, client -> client.createQueue(key, initialValue, clientId, timeout));
+        return execute(keyHint, client -> client.createQueue(key, initialValue,ttl, clientId, timeout));
     }
 
     @Override
     public CompletableFuture<KeyHint> createList(byte[] key,
                                                  List<byte[]> initialValue,
+                                                 Duration ttl,
                                                  int clientId,
                                                  Duration timeout) {
         KeyHint keyHint = getKeyHint(key);
-        return execute(keyHint, client -> client.createList(key, initialValue, clientId, timeout));
+        return execute(keyHint, client -> client.createList(key, initialValue,ttl, clientId, timeout));
     }
 
     @Override
     public CompletableFuture<KeyHint> createVector(byte[] key,
                                                    List<byte[]> initialValue,
+                                                   Duration ttl,
                                                    int clientId,
                                                    Duration timeout) {
         KeyHint keyHint = getKeyHint(key);
-        return execute(keyHint, client -> client.createVector(key, initialValue, clientId, timeout));
+        return execute(keyHint, client -> client.createVector(key, initialValue,ttl, clientId, timeout));
+    }
+
+    @Override
+    public CompletableFuture<byte[]> getAndRemoveTail(byte[] key, KeyHint hint, int clientId, Duration timeout) {
+        KeyHint keyHint = getKeyHint(key, hint);
+        return execute(keyHint, client -> client.getAndRemoveTail(key, keyHint, clientId, timeout));
     }
 
     @Override
@@ -484,16 +505,16 @@ public class FastCacheAsyncSmartClient implements FastCacheClientInterface {
         final FastCacheClientInterface master = getRoute(routingInfo, shard, MASTER);
         final FastCacheClientInterface backup = getRoute(routingInfo, shard, BACKUP);
         if (master == null && backup == null) {
-            return CompletableFuture.<T>failedFuture(new RuntimeException(
+            return CompletableFuture.failedFuture(new RuntimeException(
                     "Master and backups are both unavailable or all nodes are marked as unhealthy"));
         }
         if (master == null) {
-            log.atDebug().log("Master not available routing to {}", backup.getTarget());
+            log.atWarn().log("Master not available routing to Backup :{}", backup.getTarget());
             effectiveMode = Mode.BACKUP;
         }
 
         if (backup == null) {
-            log.atDebug().log("BACKUP not available routing to {}", master.getTarget());
+            log.atWarn().log("BACKUP not available routing to Master :{}", master.getTarget());
             effectiveMode = Mode.MASTER;
         }
 

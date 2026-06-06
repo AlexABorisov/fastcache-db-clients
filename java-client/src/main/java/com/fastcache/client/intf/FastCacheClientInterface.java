@@ -5,6 +5,7 @@ import com.fastcache.grpc.KeyHint;
 import com.fastcache.grpc.LockStatus;
 import com.fastcache.grpc.LockType;
 
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Collections;
@@ -15,6 +16,7 @@ public interface FastCacheClientInterface {
     int getDefaultClientId();
 
     Duration getDefaultTimeout();
+    default Duration getDefaultTtl() {return null;}
     String getTarget();
     default byte[] serializeKey(String key){
         return key.getBytes(StandardCharsets.UTF_8);
@@ -82,10 +84,10 @@ public interface FastCacheClientInterface {
         return getAndDeleteValue(serializeKey(key), hint, clientId, getDefaultTimeout());
     }
 
-    CompletableFuture<KeyHint> createKeyValue(byte[] key,KeyHint hint, byte[] value, int clientId, Duration timeout);
+    CompletableFuture<KeyHint> createKeyValue(byte[] key, KeyHint hint, byte[] value,Duration ttl, int clientId, Duration timeout);
 
     default CompletableFuture<KeyHint> createKeyValue(byte[] key, byte[] value, int clientId, Duration timeout){
-        return createKeyValue(key,null,value,clientId,timeout);
+        return createKeyValue(key,null,value,getDefaultTtl(),clientId,timeout);
     }
 
 
@@ -122,7 +124,7 @@ public interface FastCacheClientInterface {
     }
 
     default CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHint hint, byte[] value) {
-        return updateKeyValue(key, hint, value, getDefaultClientId(), getDefaultTimeout());
+        return updateKeyValue(key, hint, value,getDefaultTtl(), getDefaultClientId(), getDefaultTimeout());
     }
 
     default CompletableFuture<byte[]> getValue(String key, int clientId) {
@@ -132,12 +134,13 @@ public interface FastCacheClientInterface {
         return getValue(key, keyhint, clientId, getDefaultTimeout());
     }
 
-    CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHint hint, byte[] value, int clientId, Duration timeout);
+    CompletableFuture<byte[]> updateKeyValue(byte[] key, KeyHint hint, byte[] value, Duration ttl,int clientId, Duration timeout);
 
     default CompletableFuture<byte[]> updateKeyValue(String key, byte[] value) {
         return updateKeyValue(serializeKey(key),
                               null,
                               value,
+                              getDefaultTtl(),
                               getDefaultClientId(),
                               getDefaultTimeout());
     }
@@ -145,6 +148,7 @@ public interface FastCacheClientInterface {
         return updateKeyValue(key,
                               keyHint,
                               value,
+                              getDefaultTtl(),
                               clientID,
                               getDefaultTimeout());
     }
@@ -153,12 +157,13 @@ public interface FastCacheClientInterface {
         return updateKeyValue(serializeKey(key),
                               hint,
                               value,
+                              getDefaultTtl(),
                               getDefaultClientId(),
                               getDefaultTimeout());
     }
 
     default CompletableFuture<byte[]> updateKeyValue(String key, byte[] value, int clientId) {
-        return updateKeyValue(serializeKey(key), null, value, clientId, getDefaultTimeout());
+        return updateKeyValue(serializeKey(key), null, value,getDefaultTtl(), clientId, getDefaultTimeout());
     }
 
     CompletableFuture<Boolean> existKey(byte[] key, KeyHint hint, int clientId, Duration timeout);
@@ -203,11 +208,15 @@ public interface FastCacheClientInterface {
         return remove(key, hint, clientid, getDefaultTimeout());
     }
 
-    CompletableFuture<KeyHint> createQueue(byte[] key, List<byte[]> initialValue, int clientId, Duration timeout);
+    CompletableFuture<KeyHint> createQueue(byte[] key, List<byte[]> initialValue,Duration ttl, int clientId, Duration timeout);
 
+    default  CompletableFuture<KeyHint> createQueue(byte[] key, List<byte[]> initialValue,Duration ttl){
+        return createQueue(key,initialValue,ttl,getDefaultClientId(),getDefaultTimeout());
+    }
     default CompletableFuture<KeyHint> createQueue(String key) {
         return createQueue(serializeKey(key),
                            Collections.emptyList(),
+                           getDefaultTtl(),
                            getDefaultClientId(),
                            getDefaultTimeout());
     }
@@ -217,6 +226,7 @@ public interface FastCacheClientInterface {
                            initialValue == null
                            ? Collections.emptyList()
                            : initialValue,
+                           getDefaultTtl(),
                            getDefaultClientId(),
                            getDefaultTimeout());
     }
@@ -224,12 +234,15 @@ public interface FastCacheClientInterface {
         return createQueue(key,
                            initialValue == null
                            ? Collections.emptyList()
-                           : initialValue,
+                           : initialValue,getDefaultTtl(),
                            getDefaultClientId(),
                            getDefaultTimeout());
     }
     
-    CompletableFuture<KeyHint> createList(byte[] key, List<byte[]> initialValue, int clientId, Duration timeout);
+    CompletableFuture<KeyHint> createList(byte[] key, List<byte[]> initialValue,Duration ttl, int clientId, Duration timeout);
+    default CompletableFuture<KeyHint> createList(byte[] key, List<byte[]> initialValue,Duration ttl)  {
+        return createList(key,initialValue,ttl ,getDefaultClientId(),getDefaultTimeout());
+    }
 
     default CompletableFuture<KeyHint> createList(String key) {
         return createList(key, Collections.emptyList());
@@ -240,19 +253,23 @@ public interface FastCacheClientInterface {
     }
 
     default CompletableFuture<KeyHint> createList(byte [] key, List<byte[]> initialValue) {
-        return createList(key, initialValue, getDefaultClientId(),getDefaultTimeout());
+        return createList(key, initialValue,getDefaultTtl(), getDefaultClientId(),getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHint> createList(String key, List<byte[]> initialValue, int clientId) {
         return createList(serializeKey(key),
                           initialValue == null
                           ? Collections.emptyList()
-                          : initialValue,
+                          : initialValue,getDefaultTtl(),
                           clientId,
                           getDefaultTimeout());
     }
 
-    CompletableFuture<KeyHint> createVector(byte[] key, List<byte[]> initialValue, int clientId, Duration timeout);
+    CompletableFuture<KeyHint> createVector(byte[] key, List<byte[]> initialValue,Duration ttl, int clientId, Duration timeout);
+
+    default CompletableFuture<KeyHint> createVector(byte[] key, List<byte[]> initialValue,Duration ttl) {
+        return createVector(key, initialValue,ttl,getDefaultClientId(),getDefaultTimeout());
+    }
 
     default CompletableFuture<KeyHint> createVector(String key) {
         return createVector(key, Collections.emptyList());
@@ -262,14 +279,14 @@ public interface FastCacheClientInterface {
         return createVector(key, initialValue, getDefaultClientId());
     }
     default CompletableFuture<KeyHint> createVector(byte [] key, List<byte[]> initialValue) {
-        return createVector(key, initialValue, getDefaultClientId(),getDefaultTimeout());
+        return createVector(key, initialValue, getDefaultTtl(),getDefaultClientId(),getDefaultTimeout());
     }
 
     default CompletableFuture<KeyHint> createVector(String key, List<byte[]> initialValue, int clientId) {
         return createVector(serializeKey(key),
                             initialValue == null
                             ? Collections.emptyList()
-                            : initialValue,
+                            : initialValue,getDefaultTtl(),
                             clientId,
                             getDefaultTimeout());
     }
@@ -671,6 +688,21 @@ public interface FastCacheClientInterface {
     }
 
     default CompletableFuture<byte[]> getTail(String key, int clientId) {
+        return getTail(serializeKey(key), null, clientId, getDefaultTimeout());
+    }
+
+    CompletableFuture<byte[]> getAndRemoveTail(byte[] key, KeyHint hint, int clientId, Duration timeout);
+    default CompletableFuture<byte[]> getAndRemoveTail(String key) {
+        return getTail(key, getDefaultClientId());
+    }
+    default CompletableFuture<byte[]> getAndRemoveTail(String key,KeyHint hint) {
+        return getTail(serializeKey(key),hint, getDefaultClientId(),getDefaultTimeout());
+    }
+    default CompletableFuture<byte[]> getAndRemoveTail(byte[] key,KeyHint hint) {
+        return getTail(key,hint, getDefaultClientId(),getDefaultTimeout());
+    }
+
+    default CompletableFuture<byte[]> getAndRemoveTail(String key, int clientId) {
         return getTail(serializeKey(key), null, clientId, getDefaultTimeout());
     }
 

@@ -50,7 +50,12 @@ public abstract class TestBaseCluster {
 
     @BeforeEach
     void setUp() throws IOException {
-        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000,0, Duration.ofSeconds(3600));
+        client = new FastCacheAsyncSmartClient("127.0.0.1", 51000,0, Duration.ofSeconds(3600)){
+            @Override
+            public Duration getDefaultTtl() {
+                return Duration.ofMinutes(1);
+            }
+        };
     }
 
     @AfterEach

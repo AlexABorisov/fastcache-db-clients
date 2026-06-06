@@ -3,7 +3,6 @@ package com.fastcache.utils;
 import com.fastcache.grpc.BinaryPayload;
 import com.fastcache.grpc.CompressedInfo;
 import com.fastcache.grpc.Key;
-import com.fastcache.grpc.KeyHint;
 import com.fastcache.grpc.UpdateValueResponse;
 import com.fastcache.grpc.Value;
 import com.fastcache.grpc.ValueResponse;
@@ -20,7 +19,6 @@ public class CompressionUtils {
     public static Key.Builder compressKeyIfNeeded(byte[] data,Integer clientId) {
         BinaryPayload.Builder payloadBuilder = BinaryPayload.newBuilder();
         Key.Builder keyBuilder = Key.newBuilder();
-
         if (data.length > COMPRESSION_THRESHOLD) {
             LZ4Compressor compressor = factory.fastCompressor();
             int maxCompressedLength = compressor.maxCompressedLength(data.length);
@@ -45,7 +43,7 @@ public class CompressionUtils {
         return keyBuilder.setPayload(payloadBuilder.build());
     }
 
-    public static Value compressIfNeeded(byte[] data) {
+    public static Value.Builder compressIfNeeded(byte[] data) {
         BinaryPayload.Builder payloadBuilder = BinaryPayload.newBuilder();
         Value.Builder valueBuilder = Value.newBuilder();
 
@@ -67,7 +65,7 @@ public class CompressionUtils {
             payloadBuilder.setSize(data.length);
         }
 
-        return valueBuilder.setValue(payloadBuilder.build()).build();
+        return valueBuilder.setValue(payloadBuilder.build());
     }
 
     public static byte[] decompressIfNeeded(ValueResponse responseValue){
